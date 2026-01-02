@@ -7,25 +7,24 @@
      'description': """
           Entrpryz Construction BOQ Control Module
           ========================================
-          [cite_start]Implements tight control over project cost consumption via formal BOQ[cite: 6].
+          Implements tight control over project cost consumption via formal BOQ.
           
           Key Features:
-          - [cite_start]Formal BOQ as budget authority [cite: 5]
-          - [cite_start]Tight control over project cost consumption [cite: 6]
-          - [cite_start]Clear linkage between BOQ, procurement, inventory, accounting, and billing [cite: 7]
-          - [cite_start]Accurate budget vs actual and project profitability reporting [cite: 8]
-          - [cite_start]Support for BOQ revisions and variations [cite: 9]
+          - Formal BOQ as budget authority
+          - Tight control over project cost consumption
+          - Clear linkage between BOQ, procurement, inventory, accounting, and billing
+          - Accurate budget vs actual and project profitability reporting
+          - Support for BOQ revisions and variations
      """,
      'author': 'ELB Marketing & Developers',
      'website': 'https://www.entrpryz.com',
      'depends': [
           'base',
-          'project',    # Required for Project linking 
-          'analytic',   # Required for Cost Centers 
-          'purchase',   # Required for PO Integration 
-          'stock',      # Required for Inventory Moves 
-          'account',    # Required for Financial Entries 
-          # 'hr_timesheet', # Optional: labor costing 
+          'project',
+          'analytic',
+          'purchase',
+          'stock',
+          'account',
      ],
      'data': [
           'security/ir.model.access.csv',
