@@ -55,7 +55,7 @@ class ConstructionBOQ(models.Model):
         ('draft', 'Draft'),
         ('submitted', 'Submitted'),
         ('approved', 'Approved'),
-        ('locked', 'Locked'),   # Consumption allowed state
+        ('locked', 'Locked'),
         ('closed', 'Closed')
     ], string='Status', default='draft', required=True, tracking=True, copy=False)
 
@@ -184,7 +184,7 @@ class ConstructionBOQLine(models.Model):
     
     sequence = fields.Integer(string='Sequence', default=10)
 
-    # -- Display Type for Widget (REQUIRED FIX) --
+    # -- Display Type for Widget --
     display_type = fields.Selection([
         ('line_section', "Section"),
         ('line_note', "Note")
@@ -220,7 +220,7 @@ class ConstructionBOQLine(models.Model):
         store=True
     )
 
-    # -- Accounting Fields (Odoo 18 Compatible) --
+    # -- Accounting Fields --
     expense_account_id = fields.Many2one(
         'account.account',
         string='Expense Account',
