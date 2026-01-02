@@ -53,6 +53,7 @@
                                     </control>
                                     
                                     <field name="sequence" widget="handle"/>
+                                    <field name="display_type" column_invisible="1"/> 
                                     <field name="section_id" optional="hide"/>
                                     <field name="product_id"/>
                                     <field name="description"/>
