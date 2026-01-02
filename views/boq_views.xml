@@ -35,9 +35,9 @@
                     </div>
                     <group>
                         <group>
-                            <field name="project_id"/>
-                            <field name="analytic_account_id"/>
-                            <field name="company_id" groups="base.group_multi_company"/>
+                            <field name="project_id" readonly="state != 'draft'"/>
+                            <field name="analytic_account_id" readonly="state != 'draft'"/>
+                            <field name="company_id" groups="base.group_multi_company" readonly="state != 'draft'"/>
                         </group>
                         <group>
                             <field name="version"/>
@@ -49,7 +49,7 @@
 
                     <notebook>
                         <page string="BOQ Lines" name="lines">
-                            <field name="boq_line_ids" widget="section_and_note_one2many">
+                            <field name="boq_line_ids" widget="section_and_note_one2many" readonly="state in ('approved', 'locked', 'closed')">
                                 <list editable="bottom">
                                     <control>
                                         <create name="add_line_control" string="Add a line"/>
