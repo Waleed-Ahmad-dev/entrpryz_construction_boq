@@ -120,3 +120,27 @@ class ConstructionBOQ(models.Model):
           'unique(project_id, state)', 
           'Only one BOQ can be in this state for the project.')
      ]
+
+class ConstructionBOQSection(models.Model):
+     _name = 'construction.boq.section'
+     _description = 'BOQ Section'
+     _order = 'sequence, id'
+
+     name = fields.Char(
+          string='Section Name', 
+          required=True,
+          help="e.g. Civil Works, Electrical, Plumbing"
+     )
+
+     boq_id = fields.Many2one(
+          'construction.boq', 
+          string='BOQ Reference', 
+          required=True, 
+          ondelete='cascade' # If BOQ is deleted, delete sections too
+     )
+
+     sequence = fields.Integer(
+          string='Sequence', 
+          default=10,
+          help="Used to order the sections in the report"
+     )
