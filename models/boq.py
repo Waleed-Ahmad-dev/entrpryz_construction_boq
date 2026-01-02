@@ -41,7 +41,7 @@ class ConstructionBOQ(models.Model):
           default=lambda self: self.env.company
      )
 
-     # -- Task 2.4: Control Fields --
+     # -- Control Fields --
      version = fields.Integer(
           string='Version', 
           default=1, 
@@ -59,7 +59,7 @@ class ConstructionBOQ(models.Model):
           ('closed', 'Closed')
      ], string='Status', default='draft', required=True, tracking=True, copy=False)
 
-     # -- Task 2.5: Audit Fields --
+     # -- Audit Fields --
      approval_date = fields.Date(
           string='Approval Date', 
           readonly=True, 
