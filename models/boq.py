@@ -8,4 +8,41 @@ class ConstructionBOQ(models.Model):
      _inherit = ['mail.thread', 'mail.activity.mixin'] # Enables chatter and audit trail
      _order = 'id desc'
 
-     # We will add the fields here in Task 2.3
+     # -- Basic Identifier Fields --
+     name = fields.Char(
+          string='BOQ Reference', 
+          required=True, 
+          copy=False, 
+          readonly=True, 
+          default='New',
+          tracking=True
+     )     
+
+     project_id = fields.Many2one(
+          'project.project', 
+          string='Project', 
+          required=True, 
+          tracking=True,
+          domain="[('company_id', '=', company_id)]" 
+     )
+
+     analytic_account_id = fields.Many2one(
+          'account.analytic.account', 
+          string='Analytic Account', 
+          required=True,
+          tracking=True,
+          help="The cost center for this project."
+     )
+
+     company_id = fields.Many2one(
+          'res.company', 
+          string='Company', 
+          required=True, 
+          default=lambda self: self.env.company
+     )
+
+     # -- Logic to auto-fill Analytic Account from Project --
+     @api.onchange('project_id')
+     def _onchange_project_id(self):
+          if self.project_id and self.project_id.analytic_account_id:
+               self.analytic_account_id = self.project_id.analytic_account_id
