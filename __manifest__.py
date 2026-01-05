@@ -6,7 +6,6 @@
     'summary': 'Construction BOQ Management',
     'author': 'ELB Marketing',
     'website': 'https://entrpryz.com',
-    # Removed 'analytic' as it is included in 'account'/'project' and can cause graph errors if not found
     'depends': ['base', 'project', 'purchase', 'stock', 'account', 'mail'],
     'data': [
         'security/ir.model.access.csv',
