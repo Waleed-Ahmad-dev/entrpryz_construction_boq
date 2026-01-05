@@ -4,14 +4,14 @@
         <field name="name">construction.boq.tree</field>
         <field name="model">construction.boq</field>
         <field name="arch" type="xml">
-            <list string="Construction BOQs" decoration-info="state == 'draft'" decoration-muted="state == 'closed'">
+            <tree string="Construction BOQs" decoration-info="state == 'draft'" decoration-muted="state == 'closed'">
                 <field name="name"/>
                 <field name="project_id"/>
                 <field name="analytic_account_id"/>
                 <field name="total_budget" sum="Total Budget" widget="monetary"/>
                 <field name="currency_id" column_invisible="1"/>
                 <field name="state" widget="badge" decoration-success="state == 'approved'" decoration-warning="state == 'submitted'"/>
-            </list>
+            </tree>
         </field>
     </record>
 
@@ -50,7 +50,7 @@
                     <notebook>
                         <page string="BOQ Lines" name="lines">
                             <field name="boq_line_ids" widget="section_and_note_one2many" readonly="state in ('approved', 'locked', 'closed')">
-                                <list editable="bottom">
+                                <tree editable="bottom">
                                     <control>
                                         <create name="add_line_control" string="Add a line"/>
                                         <create name="add_section_control" string="Add a section" context="{'default_display_type': 'line_section'}"/>
@@ -74,7 +74,7 @@
 
                                     <field name="expense_account_id" optional="show" domain="[('deprecated', '=', False), ('company_id', '=', company_id)]"/>
                                     <field name="currency_id" column_invisible="1"/>
-                                </list>
+                                </tree>
                             </field>
                            
                             <group name="note_group" col="6" class="mt-2 mt-md-0">
@@ -117,7 +117,7 @@
     <record id="action_construction_boq" model="ir.actions.act_window">
         <field name="name">Construction BOQs</field>
         <field name="res_model">construction.boq</field>
-        <field name="view_mode">list,form</field>
+        <field name="view_mode">tree,form</field>
         <field name="help" type="html">
             <p class="o_view_nocontent_smiling_face">
                 Create a new Bill of Quantities
