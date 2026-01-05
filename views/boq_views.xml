@@ -25,7 +25,7 @@
                     <button name="action_approve" string="Approve" type="object" class="oe_highlight" invisible="state != 'submitted'"/>
                     <button name="action_lock" string="Lock" type="object" class="oe_highlight" invisible="state != 'approved'"/>
                     <button name="action_close" string="Close" type="object" invisible="state not in ('approved', 'locked')"/>
-                    <field name="state" widget="statusbar" statusbar_visible="draft,submitted,approved,locked"/>
+                    <field name="state" widget="statusbar" statusbar_visible="draft,submitted,approved,locked,closed"/>
                 </header>
                 <sheet>
                     <div class="oe_title">
@@ -55,19 +55,23 @@
                                         <create name="add_line_control" string="Add a line"/>
                                         <create name="add_section_control" string="Add a section" context="{'default_display_type': 'line_section'}"/>
                                     </control>
-                                   
+                                    
                                     <field name="sequence" widget="handle"/>
                                     <field name="display_type" column_invisible="1"/>
                                     <field name="company_id" column_invisible="1"/>
-                                   
+                                    
                                     <field name="section_id" optional="hide"/>
                                     <field name="product_id"/>
-                                    <field name="description"/>
-                                    <field name="cost_type"/>
+                                    <field name="name" widget="section_and_note_text"/>
+                                    <field name="cost_type" optional="show"/>
                                     <field name="quantity"/>
                                     <field name="uom_id"/>
                                     <field name="estimated_rate"/>
                                     <field name="budget_amount" widget="monetary" sum="Total"/>
+                                    
+                                    <field name="consumed_amount" widget="monetary" optional="hide"/>
+                                    <field name="remaining_amount" widget="monetary" optional="show" decoration-danger="remaining_amount &lt; 0"/>
+
                                     <field name="expense_account_id" optional="show" domain="[('deprecated', '=', False), ('company_id', '=', company_id)]"/>
                                     <field name="currency_id" column_invisible="1"/>
                                 </list>
