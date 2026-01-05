@@ -104,4 +104,4 @@ The module tracks "Actuals" against the "Budget".
 
 ## 6. Support
 **Author:** ELB Marketing
-**Website:** https://entrpryz.com
+**Website:** [https://entrpryz.com](https://entrpryz.com/)
