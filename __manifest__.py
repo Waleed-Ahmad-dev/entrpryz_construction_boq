@@ -5,7 +5,7 @@
     'category': 'Construction',
     'summary': 'Construction BOQ Management',
     'author': 'ELB Marketing',
-    'website': 'https://www.entrpryz.com',
+    'website': 'https://entrpryz.com',
     'depends': ['base', 'project', 'analytic', 'purchase', 'stock', 'account'],
     'data': [
         'security/ir.model.access.csv',
