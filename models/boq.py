@@ -104,6 +104,11 @@ class ConstructionBOQLine(models.Model):
     boq_id = fields.Many2one('construction.boq', string='BOQ Reference', required=True, ondelete='cascade', index=True)
     section_id = fields.Many2one('construction.boq.section', string='Section', domain="[('boq_id', '=', boq_id)]")
     product_id = fields.Many2one('product.product', string='Product', domain="[('company_id', 'in', (company_id, False))]")
+    
+    # Task & Activity Code Integration
+    task_id = fields.Many2one('project.task', string='Task', domain="[('project_id', '=', parent.project_id)]")
+    activity_code = fields.Char(string='Activity Code')
+
     company_id = fields.Many2one('res.company', related='boq_id.company_id', string='Company', store=True, readonly=True)
     currency_id = fields.Many2one('res.currency', related='company_id.currency_id', string='Currency', readonly=True)
     sequence = fields.Integer(string='Sequence', default=10)
@@ -119,7 +124,6 @@ class ConstructionBOQLine(models.Model):
     expense_account_id = fields.Many2one('account.account', string='Expense Account', required=True, check_company=True)
     analytic_account_id = fields.Many2one('account.analytic.account', related='boq_id.analytic_account_id', string='Analytic Account', store=True)
 
-    # IMPL: Step 1.2 - Added analytic distribution (Odoo 18 equivalent of analytic_tag_id)
     analytic_distribution = fields.Json(string='Analytic Distribution')
 
     consumed_quantity = fields.Float(string='Consumed Qty', compute='_compute_consumption', store=True)
@@ -150,6 +154,11 @@ class ConstructionBOQLine(models.Model):
             self.uom_id = self.product_id.uom_id
             self.estimated_rate = self.product_id.standard_price
 
+    @api.onchange('task_id')
+    def _onchange_task_id(self):
+        if self.task_id and self.task_id.activity_code:
+            self.activity_code = self.task_id.activity_code
+
     @api.constrains('boq_id', 'product_id', 'quantity', 'estimated_rate', 'name')
     def _prevent_edit_on_locked_boq(self):
         for line in self:
@@ -163,24 +172,16 @@ class ConstructionBOQLine(models.Model):
                 if rec.boq_id.analytic_account_id != rec.analytic_account_id:
                     raise ValidationError(_('BOQ Line analytic account must match the Project analytic account.'))
 
-    # BOQ Line Consumption Validation 
+    # BOQ Line Consumption Validation
     def check_consumption(self, qty, amount):
-        """
-        Validates if adding qty/amount would exceed the budget.
-        Called from Posting logic.
-        """
         self.ensure_one()
         if not self.allow_over_consumption:
-            # Check Quantity
-            # Note: We compare against remaining_quantity. Since this transaction isn't posted yet,
-            # remaining_quantity represents the available budget BEFORE this transaction.
-            if qty > self.remaining_quantity + 0.0001: # Small epsilon for float comparison
+            if qty > self.remaining_quantity + 0.0001: 
                  raise ValidationError(_(
                     'BOQ Quantity Exceeded for %s.\nAttempting to consume: %s\nRemaining: %s'
                 ) % (self.name, qty, self.remaining_quantity))
             
-            # Check Amount
-            if amount > self.remaining_amount + 0.01: # Small epsilon for monetary comparison
+            if amount > self.remaining_amount + 0.01:
                  raise ValidationError(_(
                     'BOQ Budget Exceeded for %s.\nAttempting to consume: %s\nRemaining: %s'
                 ) % (self.name, amount, self.remaining_amount))
@@ -188,7 +189,8 @@ class ConstructionBOQLine(models.Model):
     _sql_constraints = [
         ('chk_qty_positive', 'CHECK(quantity > 0)', 'Quantity must be positive.'),
         ('chk_amount_positive', 'CHECK(budget_amount >= 0)', 'Budget amount cannot be negative.'),
-        ('uniq_boq_product_section', 'unique(boq_id, section_id, product_id)', 'Duplicate product in the same section is not allowed.')
+        # Updated unique constraint to include activity_code
+        ('uniq_boq_product_section_activity', 'unique(boq_id, section_id, product_id, activity_code)', 'Duplicate product in the same section/activity is not allowed.')
     ]
 
 class ConstructionBOQConsumption(models.Model):
