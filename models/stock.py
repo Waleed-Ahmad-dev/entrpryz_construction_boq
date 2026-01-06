@@ -53,6 +53,28 @@ class StockMove(models.Model):
             
         return destination_account_id
 
+    def _prepare_account_move_line(self, qty, cost, credit_account_id, debit_account_id, description):
+        """
+        [cite_start]Subtask 4.2: Propagate Analytics to Stock Moves [cite: 88]
+        Inject analytic distribution from BOQ Line into the Stock Journal Entry.
+        This ensures that when a stock move is posted, the resulting Journal Entry carries 
+        the Project/Analytic Account defined in the BOQ.
+        """
+        self.ensure_one()
+        # Call super to get the list of move line values [(0, 0, vals), (0, 0, vals)]
+        res = super(StockMove, self)._prepare_account_move_line(qty, cost, credit_account_id, debit_account_id, description)
+        
+        if self.boq_line_id and self.boq_line_id.analytic_distribution:
+            for line_tuple in res:
+                # Ensure structure is correct
+                if len(line_tuple) == 3:
+                    vals = line_tuple[2]
+                    # We inject analytics into the Debit line (Expense/COGS side) for outgoing moves
+                    if vals.get('account_id') == debit_account_id:
+                        vals['analytic_distribution'] = self.boq_line_id.analytic_distribution
+                        
+        return res
+
     # ---------------------------------------------------------
     # Subtask 1.1: Consumption Recording & Validation
     # ---------------------------------------------------------
@@ -60,8 +82,8 @@ class StockMove(models.Model):
     def _action_done(self, cancel_backorder=False):
         """
         Override _action_done to:
-        1. [cite_start]Enforce BOQ limits (Validation) [cite: 162]
-        2. [cite_start]Create Consumption Ledger entries (Recording) [cite: 75, 76]
+        [cite_start]1. [cite: 162] Enforce BOQ limits (Validation)
+        [cite_start]2. [cite: 75, 76] Create Consumption Ledger entries (Recording)
         """
         # 1. PRE-VALIDATION PHASE (Before move is Done)
         for move in self:
