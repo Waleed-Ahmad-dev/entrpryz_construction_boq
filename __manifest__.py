@@ -8,6 +8,7 @@
     'website': 'https://entrpryz.com',
     'depends': ['base', 'project', 'purchase', 'stock', 'account', 'mail'],
     'data': [
+        'security/security.xml',
         'security/ir.model.access.csv',
         'views/boq_views.xml',
         'views/purchase_views.xml',
