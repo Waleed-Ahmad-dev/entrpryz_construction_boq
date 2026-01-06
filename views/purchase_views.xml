@@ -6,18 +6,34 @@
         <field name="inherit_id" ref="purchase.purchase_order_form"/>
         <field name="arch" type="xml">
             
+            <field name="partner_id" position="before">
+                <field name="purchase_type" widget="radio" options="{'horizontal': true}" class="oe_edit_only"/>
+            </field>
+
             <field name="partner_ref" position="after">
-                <field name="project_id" placeholder="Select Project to filter BOQ"/>
+                <field name="project_id" 
+                    placeholder="Select Project"
+                    invisible="purchase_type == 'normal'"
+                    required="purchase_type == 'boq'"
+                />
+
+                <field name="boq_id" 
+                    placeholder="Select Approved BOQ"
+                    invisible="purchase_type == 'normal'"
+                    required="purchase_type == 'boq'"
+                    options="{'no_create': True}"
+                />
             </field>
 
             <xpath expr="//field[@name='order_line']/list//field[@name='product_id']" position="before">
-                <field name="boq_line_id" 
-                    optional="show" 
-                    domain="[('boq_id.project_id', '=', parent.project_id), ('boq_id.state', 'in', ('approved', 'locked'))]"
+                <field name="boq_line_id"
+                    optional="show"
+                    column_invisible="parent.purchase_type == 'normal'"
+                    required="parent.purchase_type == 'boq'"
+                    domain="[('boq_id', '=', parent.boq_id)]"
                     options="{'no_create': True}"
                 />
             </xpath>
-            
         </field>
     </record>
 
@@ -28,9 +44,11 @@
         <field name="arch" type="xml">
             <field name="partner_id" position="after">
                 <field name="project_id"/>
+                <field name="purchase_type"/>
             </field>
             <group position="inside">
                 <filter string="Project" name="groupby_project" domain="[]" context="{'group_by': 'project_id'}"/>
+                <filter string="Purchase Mode" name="groupby_type" domain="[]" context="{'group_by': 'purchase_type'}"/>
             </group>
         </field>
     </record>
