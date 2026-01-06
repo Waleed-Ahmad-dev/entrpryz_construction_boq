@@ -24,6 +24,7 @@
                     <button name="action_submit" string="Submit" type="object" class="oe_highlight" invisible="state != 'draft'"/>
                     <button name="action_approve" string="Approve" type="object" class="oe_highlight" invisible="state != 'submitted'"/>
                     <button name="action_lock" string="Lock" type="object" class="oe_highlight" invisible="state != 'approved'"/>
+                    <button name="action_revise" string="Revise" type="object" invisible="state not in ('approved', 'locked')"/>
                     <button name="action_close" string="Close" type="object" invisible="state not in ('approved', 'locked')"/>
                     <field name="state" widget="statusbar" statusbar_visible="draft,submitted,approved,locked,closed"/>
                 </header>
@@ -63,9 +64,12 @@
                                     <field name="uom_id"/>
                                     <field name="estimated_rate"/>
                                     <field name="budget_amount" widget="monetary" sum="Total"/>
+                                    <field name="expense_account_id" optional="show" domain="[('deprecated', '=', False)]"/>
+                                    
+                                    <field name="analytic_distribution" widget="analytic_distribution" optional="show"/>
+
                                     <field name="consumed_amount" widget="monetary" optional="hide"/>
                                     <field name="remaining_amount" widget="monetary" optional="show" decoration-danger="remaining_amount &lt; 0"/>
-                                    <field name="expense_account_id" optional="show" domain="[('deprecated', '=', False)]"/>
                                     <field name="currency_id" column_invisible="1"/>
                                 </list>
                             </field>
@@ -75,6 +79,15 @@
                                 </group>
                                 <div class="clearfix"/>
                             </group>
+                        </page>
+                        <page string="Revisions" name="revisions">
+                            <field name="revision_ids" readonly="1">
+                                <list>
+                                    <field name="create_date" string="Date"/>
+                                    <field name="revision_reason"/>
+                                    <field name="approved_by"/>
+                                </list>
+                            </field>
                         </page>
                         <page string="Audit Trail" name="audit">
                             <group>
