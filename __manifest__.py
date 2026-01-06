@@ -6,11 +6,11 @@
     'summary': 'Construction BOQ Management',
     'author': 'ELB Marketing',
     'website': 'https://entrpryz.com',
-    # Added 'stock_account' to support valuation overrides
     'depends': ['base', 'project', 'purchase', 'stock', 'stock_account', 'account', 'mail'],
     'data': [
         'security/security.xml',
         'security/ir.model.access.csv',
+        'wizard/boq_revision_wizard_views.xml', # Added Wizard View
         'views/project_task_views.xml',
         'views/boq_views.xml',
         'views/purchase_views.xml',
