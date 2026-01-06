@@ -70,6 +70,9 @@
 
                                     <field name="consumed_amount" widget="monetary" optional="hide"/>
                                     <field name="remaining_amount" widget="monetary" optional="show" decoration-danger="remaining_amount &lt; 0"/>
+                                    
+                                    <field name="allow_over_consumption" optional="hide" groups="entrpryz_construction_boq.group_finance_head"/>
+                                    
                                     <field name="currency_id" column_invisible="1"/>
                                 </list>
                             </field>
