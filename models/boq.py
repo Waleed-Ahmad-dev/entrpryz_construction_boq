@@ -119,7 +119,7 @@ class ConstructionBOQLine(models.Model):
     expense_account_id = fields.Many2one('account.account', string='Expense Account', required=True, check_company=True)
     analytic_account_id = fields.Many2one('account.analytic.account', related='boq_id.analytic_account_id', string='Analytic Account', store=True)
 
-    # IMPL: Step 1.2 - Added analytic distribution (Odoo 18 equivalent of analytic_tag_id) 
+    # IMPL: Step 1.2 - Added analytic distribution (Odoo 18 equivalent of analytic_tag_id)
     analytic_distribution = fields.Json(string='Analytic Distribution')
 
     consumed_quantity = fields.Float(string='Consumed Qty', compute='_compute_consumption', store=True)
@@ -162,6 +162,28 @@ class ConstructionBOQLine(models.Model):
             if rec.boq_id.analytic_account_id and rec.analytic_account_id:
                 if rec.boq_id.analytic_account_id != rec.analytic_account_id:
                     raise ValidationError(_('BOQ Line analytic account must match the Project analytic account.'))
+
+    # BOQ Line Consumption Validation 
+    def check_consumption(self, qty, amount):
+        """
+        Validates if adding qty/amount would exceed the budget.
+        Called from Posting logic.
+        """
+        self.ensure_one()
+        if not self.allow_over_consumption:
+            # Check Quantity
+            # Note: We compare against remaining_quantity. Since this transaction isn't posted yet,
+            # remaining_quantity represents the available budget BEFORE this transaction.
+            if qty > self.remaining_quantity + 0.0001: # Small epsilon for float comparison
+                 raise ValidationError(_(
+                    'BOQ Quantity Exceeded for %s.\nAttempting to consume: %s\nRemaining: %s'
+                ) % (self.name, qty, self.remaining_quantity))
+            
+            # Check Amount
+            if amount > self.remaining_amount + 0.01: # Small epsilon for monetary comparison
+                 raise ValidationError(_(
+                    'BOQ Budget Exceeded for %s.\nAttempting to consume: %s\nRemaining: %s'
+                ) % (self.name, amount, self.remaining_amount))
 
     _sql_constraints = [
         ('chk_qty_positive', 'CHECK(quantity > 0)', 'Quantity must be positive.'),
