@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 from odoo import models, fields, api, _
-from odoo.exceptions import ValidationError
+from odoo.exceptions import ValidationError, UserError
 
 class ConstructionBOQ(models.Model):
     _name = 'construction.boq'
@@ -146,6 +146,7 @@ class ConstructionBOQLine(models.Model):
             rec.remaining_quantity = rec.quantity - rec.consumed_quantity
             rec.remaining_amount = rec.budget_amount - rec.consumed_amount
 
+    # Step 7.2 & 7.3: Auto-Fetch Expense Account & Validate
     @api.onchange('product_id')
     def _onchange_product_id(self):
         if self.product_id:
@@ -153,6 +154,18 @@ class ConstructionBOQLine(models.Model):
             self.description = self.product_id.description_sale or self.product_id.name
             self.uom_id = self.product_id.uom_id
             self.estimated_rate = self.product_id.standard_price
+            
+            # Auto-fetch expense account
+            account = self.product_id.property_account_expense_id or self.product_id.categ_id.property_account_expense_categ_id
+            
+            # Validation: Raise error if account is missing
+            if not account:
+                raise UserError(_(
+                    "No Expense Account defined for product '%s' or its category.\n"
+                    "Please configure the expense account in the Product/Category settings before using it in the BOQ."
+                ) % self.product_id.name)
+            
+            self.expense_account_id = account.id
 
     @api.onchange('task_id')
     def _onchange_task_id(self):
@@ -172,7 +185,6 @@ class ConstructionBOQLine(models.Model):
                 if rec.boq_id.analytic_account_id != rec.analytic_account_id:
                     raise ValidationError(_('BOQ Line analytic account must match the Project analytic account.'))
 
-    # BOQ Line Consumption Validation
     def check_consumption(self, qty, amount):
         self.ensure_one()
         if not self.allow_over_consumption:
@@ -189,7 +201,6 @@ class ConstructionBOQLine(models.Model):
     _sql_constraints = [
         ('chk_qty_positive', 'CHECK(quantity > 0)', 'Quantity must be positive.'),
         ('chk_amount_positive', 'CHECK(budget_amount >= 0)', 'Budget amount cannot be negative.'),
-        # Updated unique constraint to include activity_code
         ('uniq_boq_product_section_activity', 'unique(boq_id, section_id, product_id, activity_code)', 'Duplicate product in the same section/activity is not allowed.')
     ]
 
