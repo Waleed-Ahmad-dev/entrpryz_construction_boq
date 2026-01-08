@@ -1,3 +1,4 @@
+# models/boq_revision.py
 # -*- coding: utf-8 -*-
 from odoo import models, fields, api, _
 from odoo.exceptions import ValidationError
@@ -17,18 +18,19 @@ class ConstructionBOQRevision(models.Model):
     def create_revision(self, original_boq_id, reason):
         """
         Creates a revision by cloning the Original BOQ.
+        1. Lock and Archive the Old Version.
+        2. Create New Version as Active and Draft.
         """
         original_boq = self.env['construction.boq'].browse(original_boq_id)
         
         if original_boq.state not in ['approved', 'locked']:
             raise ValidationError(_("Only 'Approved' or 'Locked' BOQs can be revised."))
 
-        # 1. Clone the BOQ
-        # Increment version
+        # 1. Prepare values for the NEW version
         new_version = original_boq.version + 1
         
         default_vals = {
-            'name': f"{original_boq.name} (Rev {new_version})",
+            'name': f"{original_boq.name.split(' (Rev')[0]} (Rev {new_version})", # Handle naming efficiently
             'version': new_version,
             'state': 'draft',
             'project_id': original_boq.project_id.id,
@@ -36,13 +38,14 @@ class ConstructionBOQRevision(models.Model):
             'company_id': original_boq.company_id.id,
             'approved_by': False,
             'approval_date': False,
-            # Reset tracking
+            'active': True, # New one is active
+            'previous_boq_id': original_boq.id, # Link back to history
         }
         
-        # This will copy the BOQ header and associated One2many lines automatically
+        # 2. Clone the BOQ (This copies lines automatically)
         new_boq = original_boq.copy(default=default_vals)
 
-        # 2. Create the Revision Record
+        # 3. Create the Revision Record Log
         revision = self.create({
             'original_boq_id': original_boq.id,
             'new_boq_id': new_boq.id,
@@ -51,8 +54,16 @@ class ConstructionBOQRevision(models.Model):
             'approval_date': fields.Date.today(),
         })
 
-        # 3. Message logging
-        original_boq.message_post(body=f"Revision {new_version} created: {reason}")
+        # 4. Process the OLD BOQ
+        # Archive it so it doesn't show up as a duplicate "Active" BOQ
+        # Lock it to prevent edits (Read-Only)
+        original_boq.message_post(body=f"Revision {new_version} created: {reason}. This version is now archived.")
+        original_boq.write({
+            'active': False, 
+            'state': 'locked'
+        })
+
+        # 5. Log on new BOQ
         new_boq.message_post(body=f"Created as Revision {new_version} from {original_boq.name}. Reason: {reason}")
 
         return revision
