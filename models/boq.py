@@ -21,7 +21,6 @@ class ConstructionBOQ(models.Model):
     version = fields.Integer(string='Version', default=1, required=True, readonly=True, copy=False)
     previous_boq_id = fields.Many2one('construction.boq', string='Previous Version', readonly=True, copy=False)
     
-    # State: Note that we removed readonly logic in the View, so we rely on the Python logic to handle "locking"
     state = fields.Selection([
         ('draft', 'Draft'),
         ('submitted', 'Submitted'),
@@ -83,80 +82,85 @@ class ConstructionBOQ(models.Model):
             'context': {'active_test': False}, 
         }
 
+    def action_revise(self):
+        """ Manual revision button (optional now, since auto-revision exists) """
+        self.create_revision_snapshot()
+        return True
+
     # -------------------------------------------------------------------------
-    # AUTOMATIC VERSIONING LOGIC (COPY-ON-WRITE)
+    # COPY-ON-WRITE (AUTO VERSIONING) LOGIC
     # -------------------------------------------------------------------------
 
     def create_revision_snapshot(self):
         """
-        1. Copies the CURRENT data (before edit) to a new 'Archived' record.
-        2. Updates the CURRENT record to be the new Version (N+1).
+        This is the engine. It creates a backup of the current state,
+        then upgrades the current record to the new version.
         """
         for boq in self:
             if boq.state not in ['approved', 'locked']:
                 continue
             
-            # A. Create the Snapshot (The "Old" Version)
-            # We copy the current BOQ. The copy mechanism will duplicate the lines automatically.
+            # 1. Prepare to snapshot the CURRENT data (Version N)
             history_name = f"{boq.name} (v{boq.version})"
             
-            # Context 'revision_copy' prevents infinite recursion in create/write overrides
+            # 2. Create the snapshot (Copy)
+            # We use 'copy' to ensure all lines and data are duplicated exactly.
+            # We set active=False immediately to distinguish it.
+            # 'revision_copy' context prevents infinite loop in write/create overrides.
             history_boq = boq.with_context(revision_copy=True, mail_create_nosubscribe=True).copy({
                 'name': history_name,
                 'active': False,         # Archive it
                 'state': 'locked',       # Lock it
-                'version': boq.version,  # Keep the old version number
-                'previous_boq_id': boq.previous_boq_id.id, # Link to the one before that
+                'version': boq.version,  # It keeps the old version number
+                'previous_boq_id': boq.previous_boq_id.id, 
             })
 
-            # B. Log the snapshot in the separate Revision History Table (Audit Trail)
+            # 3. Create Audit Trail Entry
             self.env['construction.boq.revision'].create({
-                'original_boq_id': history_boq.id, # The snapshot is the "Original" now
-                'new_boq_id': boq.id,              # The current one is the "New" one
-                'revision_reason': "Automatic revision on modification.",
+                'original_boq_id': history_boq.id, 
+                'new_boq_id': boq.id,              
+                'revision_reason': "Auto-revision due to modification.",
                 'approved_by': boq.approved_by.id,
                 'approval_date': boq.approval_date,
             })
 
-            # C. Update the CURRENT Record to be the New Version
-            # We do this using SQL to avoid triggering the 'write' method again recursively
+            # 4. UPGRADE THE CURRENT RECORD (Version N -> N+1)
+            # We write directly to the current record.
+            # Reset state to Draft to force re-approval.
             new_version = boq.version + 1
-            
-            # We normally reset state to draft so it can be re-approved. 
-            # If you want it to stay approved, remove 'state': 'draft'.
-            # Given the strict control, modifying a budget usually requires re-approval.
             boq_vals = {
                 'version': new_version,
                 'previous_boq_id': history_boq.id,
-                'state': 'draft', # Reset to draft to force re-approval of changes
+                'state': 'draft', 
                 'approval_date': False,
                 'approved_by': False,
             }
             
-            # Use super write to update metadata without triggering our override logic again
+            # We use super() to write these values to avoid triggering the 'write' recursion
             super(ConstructionBOQ, boq).write(boq_vals)
             
-            # Post message
-            boq.message_post(body=f"Auto-Revision: Content modified. Archived v{boq.version-1} and created v{boq.version}.")
+            # Log it
+            boq.message_post(body=f"Content modified. Auto-created snapshot v{boq.version-1} and upgraded to v{boq.version}.")
 
     def write(self, vals):
         """
-        Override Write to detect changes in Approved/Locked BOQs.
+        Intercepts SAVE. If BOQ is Approved/Locked and user changes business data,
+        we trigger the snapshot BEFORE saving the new data.
         """
-        # If we are just copying for revision, skip logic
+        # Avoid recursion if we are creating the snapshot copy
         if self.env.context.get('revision_copy'):
             return super(ConstructionBOQ, self).write(vals)
 
-        # Fields that should NOT trigger a revision (technical fields or status updates)
-        ignore_fields = ['message_follower_ids', 'state', 'approval_date', 'approved_by', 'active', 'total_budget']
+        # Fields that are "safe" to modify without triggering a new version
+        ignore_fields = ['message_follower_ids', 'state', 'approval_date', 'approved_by', 'active', 'total_budget', 'previous_boq_id']
         
-        # Check if incoming vals contain actual business data changes
+        # Check if actual business data is changing
         has_business_changes = any(f not in ignore_fields for f in vals)
 
         if has_business_changes:
             for boq in self:
                 if boq.state in ['approved', 'locked']:
-                    # TRIGGER THE SNAPSHOT BEFORE WRITING THE NEW VALUES
+                    # CRITICAL: Snapshot current state BEFORE writing new vals
                     boq.create_revision_snapshot()
 
         return super(ConstructionBOQ, self).write(vals)
@@ -171,6 +175,22 @@ class ConstructionBOQ(models.Model):
             if boq.state == 'approved' and not boq.boq_line_ids:
                 raise ValidationError(_('BOQ cannot be approved without BOQ lines.'))
 
+    # REPLACED SQL CONSTRAINT WITH PYTHON CONSTRAINT
+    # This allows multiple records with the same version if one is archived, 
+    # and prevents the "Oh snap" error during the copy process.
+    @api.constrains('project_id', 'version', 'active')
+    def _check_unique_active_version(self):
+        for rec in self:
+            if rec.active:
+                domain = [
+                    ('project_id', '=', rec.project_id.id),
+                    ('version', '=', rec.version),
+                    ('active', '=', True),
+                    ('id', '!=', rec.id)
+                ]
+                if self.search_count(domain) > 0:
+                    raise ValidationError(_('An active BOQ with this version already exists for this project.'))
+
     def _check_one_active_boq(self):
         for rec in self:
             domain = [
@@ -182,9 +202,8 @@ class ConstructionBOQ(models.Model):
             if self.search_count(domain) > 0:
                 raise ValidationError(_('There is already an active (Approved or Locked) BOQ for this project.'))
 
-    _sql_constraints = [
-        ('uniq_project_version', 'unique(project_id, version)', 'A BOQ with this version already exists for this project.')
-    ]
+    # REMOVED: _sql_constraints = [('uniq_project_version', ...)] 
+    # Because it blocks the Copy-On-Write logic.
 
 
 class ConstructionBOQSection(models.Model):
@@ -280,35 +299,36 @@ class ConstructionBOQLine(models.Model):
                  raise ValidationError(_('BOQ Budget Exceeded for %s.') % self.name)
 
     # -------------------------------------------------------------------------
-    # PROPAGATE VERSIONING FROM LINE CHANGES
+    # PROPAGATE VERSIONING FROM LINE CHANGES (CREATE/WRITE/UNLINK)
     # -------------------------------------------------------------------------
     
     @api.model_create_multi
     def create(self, vals_list):
-        # Identify BOQ IDs being modified
+        # Trigger version snapshot if lines are added to an Approved/Locked BOQ
         boq_ids = set()
         for vals in vals_list:
             if vals.get('boq_id'):
                 boq_ids.add(vals['boq_id'])
         
         if boq_ids:
-            boqs = self.env['construction.boq'].browse(list(boq_ids))
-            # Trigger snapshot if parent is approved/locked
+            # Only trigger if NOT already making a copy (avoid recursion)
             if not self.env.context.get('revision_copy'):
+                boqs = self.env['construction.boq'].browse(list(boq_ids))
+                # Call snapshot on relevant BOQs
                 boqs.filtered(lambda b: b.state in ['approved', 'locked']).create_revision_snapshot()
 
         return super(ConstructionBOQLine, self).create(vals_list)
 
     def write(self, vals):
+        # Trigger version snapshot if lines are modified
         if not self.env.context.get('revision_copy'):
-            # Group lines by boq_id
             boqs = self.mapped('boq_id')
-            # Trigger snapshot on parents
             boqs.filtered(lambda b: b.state in ['approved', 'locked']).create_revision_snapshot()
             
         return super(ConstructionBOQLine, self).write(vals)
 
     def unlink(self):
+        # Trigger version snapshot if lines are deleted
         if not self.env.context.get('revision_copy'):
             boqs = self.mapped('boq_id')
             boqs.filtered(lambda b: b.state in ['approved', 'locked']).create_revision_snapshot()
