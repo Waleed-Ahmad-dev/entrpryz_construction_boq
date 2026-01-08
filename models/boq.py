@@ -219,7 +219,6 @@ class ConstructionBOQConsumption(models.Model):
     currency_id = fields.Many2one('res.currency', related='boq_line_id.currency_id', store=True)
     date = fields.Date(string='Date', default=fields.Date.context_today, required=True)
     user_id = fields.Many2one('res.users', string='User', default=lambda self: self.env.user)
-
     def init(self):
         """
         [cite_start]Subtask 3.1: Implement Ledger Immutability (SQL) [cite: 119-121]
