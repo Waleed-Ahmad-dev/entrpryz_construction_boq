@@ -25,6 +25,7 @@
             <field name="name">Project Manager</field>
             <field name="category_id" ref="module_category_construction"/>
             <field name="implied_ids" eval="[(4, ref('group_site_engineer'))]"/>
+            <field name="users" eval="[(4, ref('base.user_root')), (4, ref('base.user_admin'))]"/>
             <field name="comment">Can Approve and Lock BOQs.</field>
         </record>
 
