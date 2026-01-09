@@ -15,6 +15,7 @@ class ConstructionBOQ(models.Model):
     active = fields.Boolean(string='Active', default=True, help="Set to False to hide old versions.")
     
     project_id = fields.Many2one('project.project', string='Project', required=True, tracking=True)
+    # UX: Add placeholder for better usability
     analytic_account_id = fields.Many2one('account.analytic.account', string='Analytic Account', required=True, tracking=True)
     company_id = fields.Many2one('res.company', string='Company', required=True, default=lambda self: self.env.company)
     
@@ -158,10 +159,6 @@ class ConstructionBOQ(models.Model):
 
         return super(ConstructionBOQ, self).write(vals)
 
-    # -------------------------------------------------------------------------
-    # CONSTRAINTS
-    # -------------------------------------------------------------------------
-
     @api.constrains('state')
     def _check_boq_before_approval(self):
         for boq in self:
@@ -198,8 +195,6 @@ class ConstructionBOQSection(models.Model):
     _description = 'BOQ Section'
     _order = 'sequence, id'
 
-    # REMOVED: boq_id = fields.Many2one('construction.boq', ...)
-    # This makes the section global/independent
     name = fields.Char(string='Section Name', required=True)
     sequence = fields.Integer(string='Sequence', default=10)
     company_id = fields.Many2one('res.company', string='Company', default=lambda self: self.env.company)
@@ -211,10 +206,7 @@ class ConstructionBOQLine(models.Model):
     _order = 'sequence, id'
 
     boq_id = fields.Many2one('construction.boq', string='BOQ Reference', required=True, ondelete='cascade', index=True)
-    
-    # UPDATED: Removed domain linked to boq_id so global sections can be selected
     section_id = fields.Many2one('construction.boq.section', string='Section')
-    
     product_id = fields.Many2one('product.product', string='Product', domain="[('company_id', 'in', (company_id, False))]")
     
     task_id = fields.Many2one('project.task', string='Task', domain="[('project_id', '=', parent.project_id)]")
@@ -245,6 +237,9 @@ class ConstructionBOQLine(models.Model):
     allow_over_consumption = fields.Boolean(string='Allow Over Consumption', default=False)
     consumption_ids = fields.One2many('construction.boq.consumption', 'boq_line_id', string='Consumptions')
 
+    # UI/UX Helper for Progress Bars
+    consumption_percentage = fields.Float(string='Progress', compute='_compute_consumption', store=False)
+
     @api.depends('quantity', 'estimated_rate')
     def _compute_budget_amount(self):
         for rec in self:
@@ -257,6 +252,12 @@ class ConstructionBOQLine(models.Model):
             rec.consumed_amount = sum(rec.consumption_ids.mapped('amount'))
             rec.remaining_quantity = rec.quantity - rec.consumed_quantity
             rec.remaining_amount = rec.budget_amount - rec.consumed_amount
+            
+            # Compute Percentage for UI
+            if rec.budget_amount > 0:
+                rec.consumption_percentage = (rec.consumed_amount / rec.budget_amount)
+            else:
+                rec.consumption_percentage = 0.0
 
     @api.onchange('product_id')
     def _onchange_product_id(self):
@@ -290,10 +291,6 @@ class ConstructionBOQLine(models.Model):
             if amount > self.remaining_amount + 0.01:
                  raise ValidationError(_('BOQ Budget Exceeded for %s.') % self.name)
 
-    # -------------------------------------------------------------------------
-    # PROPAGATE VERSIONING FROM LINE CHANGES
-    # -------------------------------------------------------------------------
-    
     @api.model_create_multi
     def create(self, vals_list):
         boq_ids = set()
