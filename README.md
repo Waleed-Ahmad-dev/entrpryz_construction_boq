@@ -6,6 +6,8 @@ The **Entrpryz Construction BOQ** (Bill of Quantities) module is a robust Odoo 1
 
 By bridging the gap between Project Management (`project`) and Accounting (`stock_account`, `account`), this module ensures that every material cost, labor hour, and overhead expense is accounted for and linked to specific analytic accounts.
 
+---
+
 ## 2. Key Features
 
 ### 🏗️ Project-Centric Design
@@ -18,11 +20,12 @@ By bridging the gap between Project Management (`project`) and Accounting (`stoc
 
 - **Automatic Snapshots**: The module utilizes a "Copy-on-Write" mechanism. If a locked or submitted BOQ needs modification, the system automatically:
   1.  Archives the current version as a snapshot.
-  2.  Increments the version number (v1 → v2).
+  2.  Increments the version number (e.g., v1 → v2).
   3.  Creates an audit trail linking the revisions.
+- **Manual Revisions**: Users can explicitly trigger a "Revise Manually" action to create a new version snapshot on demand.
 - **Revision History**: Users can view the full history of a BOQ, comparing previous snapshots with the current active version to see exactly what changed and why.
 
-### 💰 Comprehensive Budgeting
+### 💰 Comprehensive Budgeting & Reporting
 
 - **Hierarchical BOQ**: Organize costs using **Sections** (e.g., "Substructure", "Superstructure") and **Notes** for better readability.
 - **Multi-Cost Types**: Categorize expenses into:
@@ -39,6 +42,7 @@ By bridging the gap between Project Management (`project`) and Accounting (`stoc
   - **Budget Amount**: Quantity × Estimated Rate.
   - **Consumed Amount**: Actuals tracked via integration (e.g., Purchase Orders).
   - **Remaining Amount**: Visual indicators turn red when over budget.
+- **Visual Progress**: Integrated progress bars (`consumption_percentage`) show real-time burn rate for each line item.
 - **Over-Consumption Control**: Optional strict enforcement to prevent exceeding budgeted quantities without explicit manager approval.
 
 ### 🛡️ Security & Access Control
@@ -61,9 +65,9 @@ entrpryz_construction_boq/
 │   ├── boq.py              # Core logic: Header, Line, Section, Consumption
 │   ├── boq_revision.py     # Audit mechanism for version history
 │   ├── boq_report.py       # Reporting engines
-│   └── ...                 # Extended standard models (project, stock, etc.)
+│   └── ...                 # Extended standard models
 ├── views/
-│   ├── boq_views.xml       # Form, Tree, and Search views for BOQ
+│   ├── boq_views.xml       # Form, Tree, and Search views for BOQ & Sections
 │   ├── boq_report_views.xml # Pivot and Graph views
 │   └── ...
 ├── security/
@@ -75,12 +79,13 @@ entrpryz_construction_boq/
 
 ### 3.2. Data Models
 
-| Model                          | Description      | Key Capabilities                                            |
-| :----------------------------- | :--------------- | :---------------------------------------------------------- |
-| `construction.boq`             | The BOQ Header.  | Versioning engine, Workflow state machine.                  |
-| `construction.boq.line`        | Detail lines.    | Budget calculation, integration with Products.              |
-| `construction.boq.consumption` | Ledger.          | Stores actual consumption logs (date, user, qty, amount).   |
-| `construction.boq.revision`    | Cross-reference. | Links an "Original" (archived) BOQ to a "New" (active) BOQ. |
+| Model                          | Description      | Key Capabilities                                                 |
+| :----------------------------- | :--------------- | :--------------------------------------------------------------- |
+| `construction.boq`             | The BOQ Header.  | Versioning engine, Workflow state machine.                       |
+| `construction.boq.line`        | Detail lines.    | Budget calculation, UI Progress Bars (`consumption_percentage`). |
+| `construction.boq.section`     | Sections.        | Organization of lines, Company-specific.                         |
+| `construction.boq.consumption` | Ledger.          | Stores actual consumption logs (date, user, qty, amount).        |
+| `construction.boq.revision`    | Cross-reference. | Links an "Original" (archived) BOQ to a "New" (active) BOQ.      |
 
 ---
 
@@ -105,6 +110,7 @@ Ensure the following Odoo Community/Enterprise modules are installed:
 
 1.  **User Groups**: Go to _Settings > Users & Companies > Users_. Assign the "Construction / Manager" group to users who need approval rights.
 2.  **Analytic Accounts**: Ensure your Projects have valid Analytic Accounts configured, as the BOQ relies on them for cost allocation.
+3.  **BOQ Sections**: Go to _Construction > Configuration > BOQ Sections_ to pre-define common sections (e.g., "Civil", "MEP", "Finishing") for standardization across projects.
 
 ---
 
@@ -114,38 +120,49 @@ Ensure the following Odoo Community/Enterprise modules are installed:
 
 1.  Navigate to **Construction > BOQs**.
 2.  Click **New**.
-3.  Select the **Project**. The **Analytic Account** will auto-fill.
-4.  Set the **Company** (if strictly defined).
-5.  Save to create a Draft (Version 1).
+3.  **Project Scope**:
+    - Select the **Project**.
+    - The **Analytic Account** will auto-fill from the project.
+4.  **Control & Versioning**:
+    - **Version**: Automatically tracked (starts at 1).
+    - **Previous Version**: Link to the predecessor if applicable.
+5.  Save to create a Draft.
 
 ### 5.2. Defining the Budget (Lines)
 
 1.  **Add Sections**: Break down the project (e.g., "Phase 1: Civil Works").
 2.  **Add Lines**:
-    - **Product**: Optional. Selecting a product auto-fills the UoM and Cost.
-    - **Cost Type**: Crucial for reporting. Select `Material`, `Labor`, etc.
-    - **Task**: Link to a specific project task for granular tracking.
-    - **Rate & Qty**: Enter your estimates.
-3.  **Expense Account**: Ensure the correct GL account is set (defaults from Product Category).
+    - **Product**: Select a product to auto-fill UoM and Cost.
+    - **Description**: Enter a clear description (e.g. "Concrete M25 Grade").
+    - **Cost Type**: Crucial for reporting (Material/Labor/etc.).
+    - **Estimation**: Enter Quantity and Rate.
+    - **Budget Amount**: Calculated automatically.
+3.  **Detailed View**: Click the line to open the detailed form view, which shows:
+    - **Efficiency**: Visual progress bar.
+    - **Consumption Logs**: Detailed history of actual spending.
+4.  **Expense Account**: Ensure the correct GL account is set.
 
 ### 5.3. Approval Workflow
 
-1.  **Submit**: When ready, click `Submit`. The status changes to `Submitted`.
+1.  **Submit**: When ready, click **Submit for Approval**. The status changes to `Submitted`.
 2.  **Approve**: A manager reviews the budget.
     - If valid, they click `Approve`.
     - _Constraint_: You cannot approve if another BOQ for this project is already active.
+    - _Locking_: Once approved, the BOQ lines become read-only to preserve the budget baseline.
 3.  **Lock**: Finalizes the budget, making it read-only.
-4.  **Revise**: If changes are needed after approval:
-    - Edit the BOQ.
-    - The system _automatically_ creates a revision (v1 -> v2) upon save.
-    - The old v1 is archived, and v2 becomes the new Draft/Submitted version.
+4.  **Revise**:
+    - **Auto-Revision**: Edit a locked BOQ and save. The system prompts a version upgrade.
+    - **Manual Revision**: Click **Revise Manually** to force a new version snapshot immediately.
 
 ### 5.4. Tracking Consumption
 
-Consumption is typically recorded automatically via Purchase Orders or Stock Picking if configured (custom implementation required for auto-posting).
+Consumption is typically recorded automatically via Purchase Orders or Stock Picking if configured.
 
-- **Manual Entry**: You can manually add entries to the `consumption_ids` table if enabled in the view.
-- **Review**: Check the "Remaining Amount" column on BOQ lines. Negative values indicate over-budget items.
+- **Visual Indicators**:
+  - **Progress Bars**: Show % of budget consumed per line.
+  - **Red Text**: Indicates "Remaining Amount" is negative (over budget).
+  - **Amber Text**: Warns when "Remaining Amount" is low (<10% budget left).
+- **Manual Entry**: You can manually add entries to the `consumption_ids` table in the form view if needed.
 
 ---
 
