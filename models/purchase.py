@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 from odoo import models, fields, api, _
 from odoo.exceptions import ValidationError
+from collections import defaultdict
+
 
 class PurchaseOrder(models.Model):
     _inherit = 'purchase.order'
@@ -9,7 +11,7 @@ class PurchaseOrder(models.Model):
     purchase_type = fields.Selection([
         ('normal', 'Normal Purchase'),
         ('boq', 'BOQ Purchase')
-    ], string='Purchase Mode', default='normal', required=True, 
+    ], string='Purchase Mode', default='normal', required=True,
        help="Select 'BOQ Purchase' to enforce budget controls.")
 
     project_id = fields.Many2one('project.project', string='Project')
@@ -42,34 +44,89 @@ class PurchaseOrderLine(models.Model):
 
     @api.onchange('boq_line_id')
     def _onchange_boq_line_id(self):
+        # Use mapping to avoid multiple if checks
+        field_mapping = {
+            'product_id': 'product_id',
+            'product_uom': 'uom_id',
+            'analytic_distribution': 'analytic_distribution'
+        }
+        
         if self.boq_line_id:
-            if not self.product_id:
-                self.product_id = self.boq_line_id.product_id
-            if not self.product_uom:
-                self.product_uom = self.boq_line_id.uom_id
-            if self.boq_line_id.analytic_distribution:
-                self.analytic_distribution = self.boq_line_id.analytic_distribution
+            for line_field, boq_field in field_mapping.items():
+                boq_value = getattr(self.boq_line_id, boq_field, False)
+                if boq_value and not getattr(self, line_field, False):
+                    setattr(self, line_field, boq_value)
 
     @api.constrains('product_qty', 'boq_line_id', 'order_id')
     def _check_boq_limit(self):
-        for line in self:
-            # Task 8.3.2: Validate Mode
-            if line.order_id.purchase_type == 'boq':
-                if not line.boq_line_id:
-                    raise ValidationError(_('For BOQ Purchases, every line must be linked to a BOQ Item.'))
+        """Optimized constraint method with bulk operations"""
+        
+        # Separate lines by purchase type and state for efficient processing
+        boq_lines = self.filtered(
+            lambda l: l.order_id.purchase_type == 'boq' and 
+                     l.state in ('draft', 'sent') and 
+                     l.boq_line_id
+        )
+        
+        normal_lines = self.filtered(
+            lambda l: l.order_id.purchase_type == 'boq' and 
+                     not l.boq_line_id
+        )
+        
+        # Check for lines without BOQ in BOQ purchase mode
+        if normal_lines:
+            raise ValidationError(
+                _('For BOQ Purchases, every line must be linked to a BOQ Item.')
+            )
+        
+        # Bulk fetch all related BOQ lines with their data
+        if boq_lines:
+            boq_line_ids = boq_lines.mapped('boq_line_id.id')
+            
+            # Use read_group to fetch remaining quantities in bulk
+            boq_data = self.env['construction.boq.line'].search_read(
+                [('id', 'in', boq_line_ids)],
+                ['id', 'remaining_quantity', 'allow_over_consumption', 
+                 'name', 'boq_id', 'boq_id.project_id']
+            )
+            
+            # Create lookup dictionaries for O(1) access
+            boq_by_id = {data['id']: data for data in boq_data}
+            
+            # Group lines by boq_line_id for efficient processing
+            lines_by_boq = defaultdict(list)
+            for line in boq_lines:
+                lines_by_boq[line.boq_line_id.id].append(line)
+            
+            # Check project alignment and quantity limits
+            for boq_line_id, lines in lines_by_boq.items():
+                boq_info = boq_by_id.get(boq_line_id)
+                if not boq_info:
+                    continue
                 
-                # Check Project Alignment
-                if line.order_id.project_id and line.boq_line_id.boq_id.project_id != line.order_id.project_id:
-                    raise ValidationError(_('The BOQ Line selected does not belong to the Project on the Purchase Order.'))
-
-            # Standard Quantity Checks (Only run if linked to BOQ)
-            if line.boq_line_id and line.state in ('draft', 'sent'):
-                if not line.boq_line_id.allow_over_consumption:
-                    if line.product_qty > line.boq_line_id.remaining_quantity:
-                        raise ValidationError(
-                            _('Purchase Quantity (%s) exceeds BOQ Remaining Quantity (%s) for item %s.') % (
-                                line.product_qty,
-                                line.boq_line_id.remaining_quantity,
-                                line.boq_line_id.name
+                # Check project alignment for all lines at once
+                project_mismatch_lines = [
+                    line for line in lines 
+                    if (line.order_id.project_id and 
+                        boq_info['boq_id'][0] != line.order_id.project_id.id)
+                ]
+                
+                if project_mismatch_lines:
+                    raise ValidationError(
+                        _('The BOQ Line selected does not belong to the Project on the Purchase Order.')
+                    )
+                
+                # Check quantity limits for lines where over-consumption is not allowed
+                if not boq_info['allow_over_consumption']:
+                    remaining_qty = boq_info['remaining_quantity']
+                    
+                    # Check each line's quantity against the same remaining quantity
+                    for line in lines:
+                        if line.product_qty > remaining_qty:
+                            raise ValidationError(
+                                _('Purchase Quantity (%s) exceeds BOQ Remaining Quantity (%s) for item %s.') % (
+                                    line.product_qty,
+                                    remaining_qty,
+                                    boq_info['name']
+                                )
                             )
-                        )
