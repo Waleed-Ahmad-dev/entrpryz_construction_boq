@@ -22,7 +22,6 @@ class ConstructionBOQ(models.Model):
     version = fields.Integer(string='Version', default=1, required=True, readonly=True, copy=False)
     previous_boq_id = fields.Many2one('construction.boq', string='Previous Version', readonly=True, copy=False)
     
-    # State Management
     state = fields.Selection([
         ('draft', 'Draft'),
         ('submitted', 'Submitted'),
@@ -38,10 +37,8 @@ class ConstructionBOQ(models.Model):
     boq_line_ids = fields.One2many('construction.boq.line', 'boq_id', string='BOQ Lines')
     total_budget = fields.Monetary(string='Total Budget', compute='_compute_total_budget', currency_field='currency_id', store=True, tracking=True)
     
-    # Technical field for database relation
     revision_ids = fields.One2many('construction.boq.revision', 'original_boq_id', string='Revisions (Technical)', copy=False)
     
-    # Computed field to show history regardless of whether this ID is 'original' or 'new'
     display_revision_ids = fields.Many2many('construction.boq.revision', compute='_compute_display_revision_ids', string='Revision History')
 
     @api.depends('project_id', 'revision_ids')
@@ -95,7 +92,6 @@ class ConstructionBOQ(models.Model):
         }
 
     def action_revise(self):
-        """ Manual revision button """
         self.create_revision_snapshot()
         return True
 
@@ -104,34 +100,21 @@ class ConstructionBOQ(models.Model):
     # -------------------------------------------------------------------------
 
     def create_revision_snapshot(self):
-        """
-        Engine: 
-        1. Snapshots CURRENT state to Archive (Old Version).
-        2. Updates CURRENT state to Next Version.
-        """
         for boq in self:
-            # FIX: Included 'submitted' in the check so versioning works immediately after submission
             if boq.state not in ['submitted', 'approved', 'locked']:
                 continue
             
-            # 1. Clean Name Logic using Regex to prevent "Project (v1) (v2)"
-            # Removes any existing " (v...)" tag
             base_name = re.sub(r' \(v\d+\)$', '', boq.name)
-            
-            # Name for the Snapshot (History)
             history_name = f"{base_name} (v{boq.version})"
             
-            # 2. Create the snapshot (Copy)
-            # revision_copy context prevents infinite recursion
             history_boq = boq.with_context(revision_copy=True, mail_create_nosubscribe=True).copy({
                 'name': history_name,
-                'active': False,         # Archive it
-                'state': 'locked',       # Lock it
-                'version': boq.version,  # Keep old version number
+                'active': False,
+                'state': 'locked',
+                'version': boq.version,
                 'previous_boq_id': boq.previous_boq_id.id, 
             })
 
-            # 3. Create Audit Trail Entry
             self.env['construction.boq.revision'].create({
                 'original_boq_id': history_boq.id, 
                 'new_boq_id': boq.id,              
@@ -140,7 +123,6 @@ class ConstructionBOQ(models.Model):
                 'approval_date': boq.approval_date,
             })
 
-            # 4. UPGRADE THE CURRENT RECORD
             new_version = boq.version + 1
             new_name = f"{base_name} (v{new_version})"
             
@@ -148,43 +130,30 @@ class ConstructionBOQ(models.Model):
                 'version': new_version,
                 'name': new_name, 
                 'previous_boq_id': history_boq.id,
-                # Note: We reset to 'draft' so it requires re-approval/submission logic
-                # If you want it to stay submitted, change this to 'submitted'
                 'state': 'draft', 
                 'approval_date': False,
                 'approved_by': False,
             }
             
-            # Use super() to write these values to avoid triggering the 'write' recursion
             super(ConstructionBOQ, boq).write(boq_vals)
             
-            # Log it
             boq.message_post(body=f"Content modified. Archived v{boq.version-1} and upgraded to v{boq.version}.")
 
     def write(self, vals):
-        """
-        Intercepts SAVE. If BOQ is Submitted/Approved/Locked and user changes business data,
-        we trigger the snapshot BEFORE saving the new data.
-        """
-        # Avoid recursion if we are creating the snapshot copy
         if self.env.context.get('revision_copy'):
             return super(ConstructionBOQ, self).write(vals)
 
-        # Fields that are "safe" to modify without triggering a new version
         ignore_fields = [
             'message_follower_ids', 'state', 'approval_date', 'approved_by', 
             'active', 'total_budget', 'previous_boq_id', 'revision_ids', 
             'display_revision_ids', 'write_date', 'write_uid', 'name'
         ]
         
-        # Check if actual business data is changing
         has_business_changes = any(f not in ignore_fields for f in vals)
 
         if has_business_changes:
             for boq in self:
-                # FIX: Added 'submitted' here as well
                 if boq.state in ['submitted', 'approved', 'locked']:
-                    # CRITICAL: Snapshot current state BEFORE writing new vals
                     boq.create_revision_snapshot()
 
         return super(ConstructionBOQ, self).write(vals)
@@ -229,9 +198,11 @@ class ConstructionBOQSection(models.Model):
     _description = 'BOQ Section'
     _order = 'sequence, id'
 
+    # REMOVED: boq_id = fields.Many2one('construction.boq', ...)
+    # This makes the section global/independent
     name = fields.Char(string='Section Name', required=True)
-    boq_id = fields.Many2one('construction.boq', string='BOQ Reference', required=True, ondelete='cascade')
     sequence = fields.Integer(string='Sequence', default=10)
+    company_id = fields.Many2one('res.company', string='Company', default=lambda self: self.env.company)
 
 
 class ConstructionBOQLine(models.Model):
@@ -240,7 +211,10 @@ class ConstructionBOQLine(models.Model):
     _order = 'sequence, id'
 
     boq_id = fields.Many2one('construction.boq', string='BOQ Reference', required=True, ondelete='cascade', index=True)
-    section_id = fields.Many2one('construction.boq.section', string='Section', domain="[('boq_id', '=', boq_id)]")
+    
+    # UPDATED: Removed domain linked to boq_id so global sections can be selected
+    section_id = fields.Many2one('construction.boq.section', string='Section')
+    
     product_id = fields.Many2one('product.product', string='Product', domain="[('company_id', 'in', (company_id, False))]")
     
     task_id = fields.Many2one('project.task', string='Task', domain="[('project_id', '=', parent.project_id)]")
@@ -317,7 +291,7 @@ class ConstructionBOQLine(models.Model):
                  raise ValidationError(_('BOQ Budget Exceeded for %s.') % self.name)
 
     # -------------------------------------------------------------------------
-    # PROPAGATE VERSIONING FROM LINE CHANGES (CREATE/WRITE/UNLINK)
+    # PROPAGATE VERSIONING FROM LINE CHANGES
     # -------------------------------------------------------------------------
     
     @api.model_create_multi
@@ -330,7 +304,6 @@ class ConstructionBOQLine(models.Model):
         if boq_ids:
             if not self.env.context.get('revision_copy'):
                 boqs = self.env['construction.boq'].browse(list(boq_ids))
-                # FIX: Added 'submitted' to state check
                 boqs.filtered(lambda b: b.state in ['submitted', 'approved', 'locked']).create_revision_snapshot()
 
         return super(ConstructionBOQLine, self).create(vals_list)
@@ -338,7 +311,6 @@ class ConstructionBOQLine(models.Model):
     def write(self, vals):
         if not self.env.context.get('revision_copy'):
             boqs = self.mapped('boq_id')
-            # FIX: Added 'submitted' to state check
             boqs.filtered(lambda b: b.state in ['submitted', 'approved', 'locked']).create_revision_snapshot()
             
         return super(ConstructionBOQLine, self).write(vals)
@@ -346,7 +318,6 @@ class ConstructionBOQLine(models.Model):
     def unlink(self):
         if not self.env.context.get('revision_copy'):
             boqs = self.mapped('boq_id')
-            # FIX: Added 'submitted' to state check
             boqs.filtered(lambda b: b.state in ['submitted', 'approved', 'locked']).create_revision_snapshot()
             
         return super(ConstructionBOQLine, self).unlink()
