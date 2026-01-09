@@ -28,7 +28,7 @@
                             <field name="currency_id" invisible="1"/>
                         </group>
                         <group string="Classification">
-                            <field name="section_id" options="{'no_create': True}"/>
+                            <field name="section_id"/>
                             <field name="cost_type" widget="radio" options="{'horizontal': true}"/>
                             <field name="task_id" options="{'no_create': True}"/>
                             <field name="activity_code"/>
@@ -255,6 +255,7 @@
         sequence="10"
     />
     <menuitem id="menu_construction_boq" name="BOQs" parent="menu_construction_root" action="action_construction_boq" sequence="1"/>
+    
     <menuitem id="menu_construction_configuration" name="Configuration" parent="menu_construction_root" sequence="100"/>
     <menuitem id="menu_construction_boq_section" name="BOQ Sections" parent="menu_construction_configuration" action="action_construction_boq_section" sequence="1"/>
 </odoo>
