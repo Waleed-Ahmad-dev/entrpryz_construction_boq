@@ -30,6 +30,10 @@ class AccountMove(models.Model):
                         (line.boq_line_id.id,)
                     )
                     
+                    # FIX: Invalidate cache to ensure we read the latest values committed by other transactions
+                    # This prevents race conditions where the limit check uses stale cached data
+                    line.boq_line_id.invalidate_recordset()
+
                     # Prepare values
                     # Convert quantity based on move type
                     qty_to_consume = line.quantity * sign
