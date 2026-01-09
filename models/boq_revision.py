@@ -8,62 +8,11 @@ class ConstructionBOQRevision(models.Model):
     _description = 'BOQ Revision History'
     _order = 'create_date desc'
 
-    original_boq_id = fields.Many2one('construction.boq', string='Original BOQ', required=True, readonly=True, ondelete='restrict')
-    new_boq_id = fields.Many2one('construction.boq', string='New BOQ', required=True, readonly=True, ondelete='cascade')
+    original_boq_id = fields.Many2one('construction.boq', string='Original BOQ (Snapshot)', required=True, readonly=True, ondelete='restrict')
+    new_boq_id = fields.Many2one('construction.boq', string='New BOQ (Current)', required=True, readonly=True, ondelete='cascade')
     revision_reason = fields.Text(string='Reason for Revision', required=True)
     approved_by = fields.Many2one('res.users', string='Approved By', readonly=True)
     approval_date = fields.Date(string='Approval Date', readonly=True)
     
-    @api.model
-    def create_revision(self, original_boq_id, reason):
-        """
-        Creates a revision by cloning the Original BOQ.
-        1. Lock and Archive the Old Version.
-        2. Create New Version as Active and Draft.
-        """
-        original_boq = self.env['construction.boq'].browse(original_boq_id)
-        
-        if original_boq.state not in ['approved', 'locked']:
-            raise ValidationError(_("Only 'Approved' or 'Locked' BOQs can be revised."))
-
-        # 1. Prepare values for the NEW version
-        new_version = original_boq.version + 1
-        
-        default_vals = {
-            'name': f"{original_boq.name.split(' (Rev')[0]} (Rev {new_version})", # Handle naming efficiently
-            'version': new_version,
-            'state': 'draft',
-            'project_id': original_boq.project_id.id,
-            'analytic_account_id': original_boq.analytic_account_id.id,
-            'company_id': original_boq.company_id.id,
-            'approved_by': False,
-            'approval_date': False,
-            'active': True, # New one is active
-            'previous_boq_id': original_boq.id, # Link back to history
-        }
-        
-        # 2. Clone the BOQ (This copies lines automatically)
-        new_boq = original_boq.copy(default=default_vals)
-
-        # 3. Create the Revision Record Log
-        revision = self.create({
-            'original_boq_id': original_boq.id,
-            'new_boq_id': new_boq.id,
-            'revision_reason': reason,
-            'approved_by': self.env.user.id,
-            'approval_date': fields.Date.today(),
-        })
-
-        # 4. Process the OLD BOQ
-        # Archive it so it doesn't show up as a duplicate "Active" BOQ
-        # Lock it to prevent edits (Read-Only)
-        original_boq.message_post(body=f"Revision {new_version} created: {reason}. This version is now archived.")
-        original_boq.write({
-            'active': False, 
-            'state': 'locked'
-        })
-
-        # 5. Log on new BOQ
-        new_boq.message_post(body=f"Created as Revision {new_version} from {original_boq.name}. Reason: {reason}")
-
-        return revision
+    # We rely on construction.boq to handle the logic. 
+    # This model simply stores the history link.
