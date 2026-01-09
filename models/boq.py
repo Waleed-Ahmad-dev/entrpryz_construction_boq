@@ -102,20 +102,24 @@ class ConstructionBOQ(models.Model):
 
     def create_revision_snapshot(self):
         for boq in self:
+            # FIX: Included 'submitted' in the check so versioning works immediately after submission
             if boq.state not in ['submitted', 'approved', 'locked']:
                 continue
             
+            # 1. Clean Name Logic
             base_name = re.sub(r' \(v\d+\)$', '', boq.name)
             history_name = f"{base_name} (v{boq.version})"
             
+            # 2. Create the snapshot (Copy)
             history_boq = boq.with_context(revision_copy=True, mail_create_nosubscribe=True).copy({
                 'name': history_name,
-                'active': False,
-                'state': 'locked',
-                'version': boq.version,
+                'active': False,         # Archive it
+                'state': 'locked',       # Lock it
+                'version': boq.version,  # Keep old version number
                 'previous_boq_id': boq.previous_boq_id.id, 
             })
 
+            # 3. Create Audit Trail Entry
             self.env['construction.boq.revision'].create({
                 'original_boq_id': history_boq.id, 
                 'new_boq_id': boq.id,              
@@ -124,6 +128,7 @@ class ConstructionBOQ(models.Model):
                 'approval_date': boq.approval_date,
             })
 
+            # 4. UPGRADE THE CURRENT RECORD
             new_version = boq.version + 1
             new_name = f"{base_name} (v{new_version})"
             
@@ -136,8 +141,10 @@ class ConstructionBOQ(models.Model):
                 'approved_by': False,
             }
             
+            # Use super() to write these values to avoid triggering the 'write' recursion
             super(ConstructionBOQ, boq).write(boq_vals)
             
+            # Log it
             boq.message_post(body=f"Content modified. Archived v{boq.version-1} and upgraded to v{boq.version}.")
 
     def write(self, vals):
@@ -158,6 +165,10 @@ class ConstructionBOQ(models.Model):
                     boq.create_revision_snapshot()
 
         return super(ConstructionBOQ, self).write(vals)
+
+    # -------------------------------------------------------------------------
+    # CONSTRAINTS
+    # -------------------------------------------------------------------------
 
     @api.constrains('state')
     def _check_boq_before_approval(self):
@@ -195,6 +206,7 @@ class ConstructionBOQSection(models.Model):
     _description = 'BOQ Section'
     _order = 'sequence, id'
 
+    # UPDATED: Removed boq_id to make sections independent/global
     name = fields.Char(string='Section Name', required=True)
     sequence = fields.Integer(string='Sequence', default=10)
     company_id = fields.Many2one('res.company', string='Company', default=lambda self: self.env.company)
@@ -206,7 +218,10 @@ class ConstructionBOQLine(models.Model):
     _order = 'sequence, id'
 
     boq_id = fields.Many2one('construction.boq', string='BOQ Reference', required=True, ondelete='cascade', index=True)
+    
+    # UPDATED: Removed domain linked to boq_id so global sections can be selected
     section_id = fields.Many2one('construction.boq.section', string='Section')
+    
     product_id = fields.Many2one('product.product', string='Product', domain="[('company_id', 'in', (company_id, False))]")
     
     task_id = fields.Many2one('project.task', string='Task', domain="[('project_id', '=', parent.project_id)]")
@@ -248,7 +263,7 @@ class ConstructionBOQLine(models.Model):
     @api.depends('quantity', 'budget_amount', 'consumption_ids.quantity', 'consumption_ids.amount')
     def _compute_consumption(self):
         for rec in self:
-            # Performance: Iterate once over consumption_ids to avoid double mapped() overhead
+            # Performance: Iterate once over consumption_ids
             c_qty = 0.0
             c_amt = 0.0
             for c in rec.consumption_ids:
@@ -263,7 +278,6 @@ class ConstructionBOQLine(models.Model):
     @api.depends('consumed_amount', 'budget_amount')
     def _compute_consumption_percentage(self):
         for rec in self:
-            # Performance: Depends only on stored fields, avoiding fetch of consumption_ids on read
             if rec.budget_amount > 0:
                 rec.consumption_percentage = (rec.consumed_amount / rec.budget_amount)
             else:
@@ -301,6 +315,10 @@ class ConstructionBOQLine(models.Model):
             if amount > self.remaining_amount + 0.01:
                  raise ValidationError(_('BOQ Budget Exceeded for %s.') % self.name)
 
+    # -------------------------------------------------------------------------
+    # PROPAGATE VERSIONING FROM LINE CHANGES
+    # -------------------------------------------------------------------------
+    
     @api.model_create_multi
     def create(self, vals_list):
         boq_ids = set()
