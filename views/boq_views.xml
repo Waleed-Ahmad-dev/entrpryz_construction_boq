@@ -1,17 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <!-- BOQ Form View -->
     <record id="view_construction_boq_form" model="ir.ui.view">
         <field name="name">construction.boq.form</field>
         <field name="model">construction.boq</field>
         <field name="arch" type="xml">
             <form string="Construction BOQ">
                 <header>
-                    <button name="action_submit" string="Submit for Approval" type="object" class="oe_highlight" states="draft"/>
-                    <button name="action_approve" string="Approve" type="object" class="oe_highlight" states="submitted"/>
-                    <button name="action_lock" string="Lock" type="object" class="oe_highlight" states="approved"/>
-                    <button name="action_revise" string="Revise Manually" type="object" states="approved,locked" confirm="This will archive the current approved BOQ and create a new draft version. Continue?"/>
-                    <button name="action_close" string="Close" type="object" states="approved,locked" confirm="This will permanently close the BOQ. You cannot reopen it. Continue?"/>
+                    <button name="action_submit" string="Submit for Approval" type="object" class="oe_highlight" invisible="state != 'draft'"/>
+                    <button name="action_approve" string="Approve" type="object" class="oe_highlight" invisible="state != 'submitted'"/>
+                    <button name="action_lock" string="Lock" type="object" class="oe_highlight" invisible="state != 'approved'"/>
+                    <button name="action_revise" string="Revise Manually" type="object" invisible="state not in ('approved', 'locked')" confirm="This will archive the current approved BOQ and create a new draft version. Continue?"/>
+                    <button name="action_close" string="Close" type="object" invisible="state not in ('approved', 'locked')" confirm="This will permanently close the BOQ. You cannot reopen it. Continue?"/>
                     <field name="state" widget="statusbar" statusbar_visible="draft,submitted,approved,locked,closed"/>
                 </header>
                 <sheet>
@@ -61,10 +60,8 @@
                                     <field name="sequence" widget="handle"/>
                                     <field name="display_type" column_invisible="1"/>
 
-                                    <!-- Section/Note Display -->
                                     <field name="name" widget="section_and_note_text" invisible="not display_type"/>
 
-                                    <!-- Regular Line Display -->
                                     <field name="product_id" invisible="display_type" widget="many2one_avatar"/>
                                     <field name="quantity" invisible="display_type" string="Budget Qty"/>
                                     <field name="estimated_rate" invisible="display_type" string="Budget Rate"/>
@@ -74,7 +71,6 @@
                                     <field name="currency_id" column_invisible="1"/>
                                     <field name="product_config_valid" column_invisible="1"/>
 
-                                    <!-- Action Button Column -->
                                     <field name="id" widget="handle"/>
                                     <button name="action_open_advanced_view" type="object" icon="fa-external-link" string="Advanced" invisible="display_type" class="oe_edit_only"/>
                                 </list>
