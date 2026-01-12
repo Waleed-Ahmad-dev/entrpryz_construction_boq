@@ -4,8 +4,8 @@
     'version': '1.0',
     'category': 'Construction',
     'summary': 'Construction BOQ Management',
-    'author': 'ELB Marketing',
-    'website': 'https://entrpryz.com',
+    'author': 'Waleed Ahmad (Shadow Scripter)',
+    'website': 'https://www.shadowscripter.online',
     # Added 'stock_account' to support valuation overrides
     'depends': ['base', 'project', 'purchase', 'stock', 'stock_account', 'account', 'mail'],
     'data': [
