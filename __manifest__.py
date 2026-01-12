@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 {
     'name': 'Entrpryz Construction BOQ',
-    'version': '1.0',
+    'version': '1.0.1',
     'category': 'Construction',
     'summary': 'Construction BOQ Management',
     'author': 'Waleed Ahmad (Shadow Scripter)',
