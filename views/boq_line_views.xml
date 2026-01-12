@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- ./views/boq_line_views.xml -->
 <odoo>
-    <!-- Simple Tree View for BOQ Lines -->
+    <!-- Simple List View for BOQ Lines -->
     <record id="view_construction_boq_line_simple_tree" model="ir.ui.view">
         <field name="name">construction.boq.line.simple.tree</field>
         <field name="model">construction.boq.line</field>
         <field name="arch" type="xml">
-            <tree string="BOQ Lines" editable="bottom" decoration-danger="remaining_amount &lt; 0" decoration-warning="remaining_amount &lt; (budget_amount * 0.1)">
+            <list string="BOQ Lines" editable="bottom" decoration-danger="remaining_amount &lt; 0" decoration-warning="remaining_amount &lt; (budget_amount * 0.1)">
                 <field name="sequence" widget="handle"/>
                 <field name="display_type" invisible="1"/>
 
@@ -22,7 +22,7 @@
 
                 <field name="currency_id" invisible="1"/>
                 <field name="product_config_valid" invisible="1"/>
-            </tree>
+            </list>
         </field>
     </record>
 
@@ -85,13 +85,13 @@
 
                         <page string="Consumption History" name="consumption">
                             <field name="consumption_ids" readonly="1">
-                                <tree>
+                                <list>
                                     <field name="date"/>
                                     <field name="source_model"/>
                                     <field name="quantity"/>
                                     <field name="amount"/>
                                     <field name="user_id"/>
-                                </tree>
+                                </list>
                             </field>
                         </page>
                     </notebook>
