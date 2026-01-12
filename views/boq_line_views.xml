@@ -1,7 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- ./views/boq_line_views.xml -->
 <odoo>
-    <!-- Simple List View for BOQ Lines -->
     <record id="view_construction_boq_line_simple_tree" model="ir.ui.view">
         <field name="name">construction.boq.line.simple.tree</field>
         <field name="model">construction.boq.line</field>
@@ -10,10 +8,8 @@
                 <field name="sequence" widget="handle"/>
                 <field name="display_type" invisible="1"/>
 
-                <!-- Section/Note Display -->
-                <field name="name" widget="section_and_note_text" invisible="display_type = False"/>
+                <field name="name" widget="section_and_note_text" invisible="not display_type"/>
 
-                <!-- Regular Line Display -->
                 <field name="product_id" invisible="display_type != False" widget="many2one_avatar"/>
                 <field name="quantity" invisible="display_type != False" string="Budget Qty"/>
                 <field name="estimated_rate" invisible="display_type != False" string="Budget Rate"/>
@@ -26,7 +22,6 @@
         </field>
     </record>
 
-    <!-- Advanced Form View (Popup) -->
     <record id="view_construction_boq_line_advanced_form" model="ir.ui.view">
         <field name="name">construction.boq.line.advanced.form</field>
         <field name="model">construction.boq.line</field>
@@ -47,9 +42,9 @@
 
                     <group>
                         <group string="Basic Information">
-                            <field name="product_id" widget="many2one_avatar" required="display_type = False"/>
-                            <field name="quantity" required="display_type = False"/>
-                            <field name="uom_id" required="display_type = False"/>
+                            <field name="product_id" widget="many2one_avatar" required="not display_type"/>
+                            <field name="quantity" required="not display_type"/>
+                            <field name="uom_id" required="not display_type"/>
                             <field name="estimated_rate"/>
                             <field name="budget_amount" widget="monetary" readonly="1"/>
                             <field name="currency_id" invisible="1"/>
@@ -59,6 +54,7 @@
                             <field name="cost_type" widget="radio" options="{'horizontal': true}"/>
                             <field name="task_id" options="{'no_create': True}"/>
                             <field name="activity_code"/>
+                            <field name="display_type" invisible="1"/>
                         </group>
                     </group>
 
@@ -72,7 +68,7 @@
                         </group>
 
                         <group string="Accounting">
-                            <field name="expense_account_id" required="display_type = False"/>
+                            <field name="expense_account_id" required="not display_type"/>
                             <field name="analytic_account_id" readonly="1"/>
                             <field name="analytic_distribution" widget="analytic_distribution"/>
                         </group>
@@ -103,7 +99,6 @@
         </field>
     </record>
 
-    <!-- Action for Advanced View -->
     <record id="action_construction_boq_line_advanced" model="ir.actions.act_window">
         <field name="name">Advanced BOQ Line</field>
         <field name="res_model">construction.boq.line</field>
