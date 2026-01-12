@@ -11,14 +11,14 @@
                 <field name="display_type" invisible="1"/>
 
                 <!-- Section/Note Display -->
-                <field name="name" widget="section_and_note_text" attrs="{'invisible': [('display_type', '=', False)]}"/>
+                <field name="name" widget="section_and_note_text" invisible="display_type = False"/>
 
                 <!-- Regular Line Display -->
-                <field name="product_id" attrs="{'invisible': [('display_type', '!=', False)]}" widget="many2one_avatar"/>
-                <field name="quantity" attrs="{'invisible': [('display_type', '!=', False)]}" string="Budget Qty"/>
-                <field name="estimated_rate" attrs="{'invisible': [('display_type', '!=', False)]}" string="Budget Rate"/>
-                <field name="budget_amount" attrs="{'invisible': [('display_type', '!=', False)]}" widget="monetary" string="Budget Amount"/>
-                <field name="remaining_amount" attrs="{'invisible': [('display_type', '!=', False)]}" widget="monetary" string="Available Budget"/>
+                <field name="product_id" invisible="display_type != False" widget="many2one_avatar"/>
+                <field name="quantity" invisible="display_type != False" string="Budget Qty"/>
+                <field name="estimated_rate" invisible="display_type != False" string="Budget Rate"/>
+                <field name="budget_amount" invisible="display_type != False" widget="monetary" string="Budget Amount"/>
+                <field name="remaining_amount" invisible="display_type != False" widget="monetary" string="Available Budget"/>
 
                 <field name="currency_id" invisible="1"/>
                 <field name="product_config_valid" invisible="1"/>
@@ -47,9 +47,9 @@
 
                     <group>
                         <group string="Basic Information">
-                            <field name="product_id" widget="many2one_avatar" attrs="{'required': [('display_type', '=', False)]}"/>
-                            <field name="quantity" attrs="{'required': [('display_type', '=', False)]}"/>
-                            <field name="uom_id" attrs="{'required': [('display_type', '=', False)]}"/>
+                            <field name="product_id" widget="many2one_avatar" required="display_type = False"/>
+                            <field name="quantity" required="display_type = False"/>
+                            <field name="uom_id" required="display_type = False"/>
                             <field name="estimated_rate"/>
                             <field name="budget_amount" widget="monetary" readonly="1"/>
                             <field name="currency_id" invisible="1"/>
@@ -72,7 +72,7 @@
                         </group>
 
                         <group string="Accounting">
-                            <field name="expense_account_id" attrs="{'required': [('display_type', '=', False)]}"/>
+                            <field name="expense_account_id" required="display_type = False"/>
                             <field name="analytic_account_id" readonly="1"/>
                             <field name="analytic_distribution" widget="analytic_distribution"/>
                         </group>
