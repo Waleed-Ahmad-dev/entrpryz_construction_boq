@@ -19,9 +19,9 @@ By bridging the gap between Project Management (`project`) and Accounting (`stoc
 ### 🔄 Advanced Versioning & History (Copy-on-Write)
 
 - **Automatic Snapshots**: The module utilizes a "Copy-on-Write" mechanism. If a locked or submitted BOQ needs modification, the system automatically:
-  1.  Archives the current version as a snapshot.
-  2.  Increments the version number (e.g., v1 → v2).
-  3.  Creates an audit trail linking the revisions.
+  1. Archives the current version as a snapshot.
+  2. Increments the version number (e.g., v1 → v2).
+  3. Creates an audit trail linking the revisions.
 - **Manual Revisions**: Users can explicitly trigger a "Revise Manually" action to create a new version snapshot on demand.
 - **Revision History**: Users can view the full history of a BOQ, comparing previous snapshots with the current active version to see exactly what changed and why.
 
@@ -101,16 +101,16 @@ Ensure the following Odoo Community/Enterprise modules are installed:
 
 ### 4.2. Installation Steps
 
-1.  Clone this repository into your Odoo `addons` path.
-2.  Restart the Odoo service.
-3.  Log in as Administrator.
-4.  Go to **Apps**, search for `Entrpryz Construction BOQ`, and click **Activate**.
+1. Clone this repository into your Odoo `addons` path.
+2. Restart the Odoo service.
+3. Log in as Administrator.
+4. Go to **Apps**, search for `Entrpryz Construction BOQ`, and click **Activate**.
 
 ### 4.3. Post-Installation Configuration
 
-1.  **User Groups**: Go to _Settings > Users & Companies > Users_. Assign the "Construction / Manager" group to users who need approval rights.
-2.  **Analytic Accounts**: Ensure your Projects have valid Analytic Accounts configured, as the BOQ relies on them for cost allocation.
-3.  **BOQ Sections**: Go to _Construction > Configuration > BOQ Sections_ to pre-define common sections (e.g., "Civil", "MEP", "Finishing") for standardization across projects.
+1. **User Groups**: Go to _Settings > Users & Companies > Users_. Assign the "Construction / Manager" group to users who need approval rights.
+2. **Analytic Accounts**: Ensure your Projects have valid Analytic Accounts configured, as the BOQ relies on them for cost allocation.
+3. **BOQ Sections**: Go to _Construction > Configuration > BOQ Sections_ to pre-define common sections (e.g., "Civil", "MEP", "Finishing") for standardization across projects.
 
 ---
 
@@ -118,39 +118,39 @@ Ensure the following Odoo Community/Enterprise modules are installed:
 
 ### 5.1. Creating a Bill of Quantities
 
-1.  Navigate to **Construction > BOQs**.
-2.  Click **New**.
-3.  **Project Scope**:
+1. Navigate to **Construction > BOQs**.
+2. Click **New**.
+3. **Project Scope**:
     - Select the **Project**.
     - The **Analytic Account** will auto-fill from the project.
-4.  **Control & Versioning**:
+4. **Control & Versioning**:
     - **Version**: Automatically tracked (starts at 1).
     - **Previous Version**: Link to the predecessor if applicable.
-5.  Save to create a Draft.
+5. Save to create a Draft.
 
 ### 5.2. Defining the Budget (Lines)
 
-1.  **Add Sections**: Break down the project (e.g., "Phase 1: Civil Works").
-2.  **Add Lines**:
+1. **Add Sections**: Break down the project (e.g., "Phase 1: Civil Works").
+2. **Add Lines**:
     - **Product**: Select a product to auto-fill UoM and Cost.
     - **Description**: Enter a clear description (e.g. "Concrete M25 Grade").
     - **Cost Type**: Crucial for reporting (Material/Labor/etc.).
     - **Estimation**: Enter Quantity and Rate.
     - **Budget Amount**: Calculated automatically.
-3.  **Detailed View**: Click the line to open the detailed form view, which shows:
+3. **Detailed View**: Click the line to open the detailed form view, which shows:
     - **Efficiency**: Visual progress bar.
     - **Consumption Logs**: Detailed history of actual spending.
-4.  **Expense Account**: Ensure the correct GL account is set.
+4. **Expense Account**: Ensure the correct GL account is set.
 
 ### 5.3. Approval Workflow
 
-1.  **Submit**: When ready, click **Submit for Approval**. The status changes to `Submitted`.
-2.  **Approve**: A manager reviews the budget.
+1. **Submit**: When ready, click **Submit for Approval**. The status changes to `Submitted`.
+2. **Approve**: A manager reviews the budget.
     - If valid, they click `Approve`.
     - _Constraint_: You cannot approve if another BOQ for this project is already active.
     - _Locking_: Once approved, the BOQ lines become read-only to preserve the budget baseline.
-3.  **Lock**: Finalizes the budget, making it read-only.
-4.  **Revise**:
+3. **Lock**: Finalizes the budget, making it read-only.
+4. **Revise**:
     - **Auto-Revision**: Edit a locked BOQ and save. The system prompts a version upgrade.
     - **Manual Revision**: Click **Revise Manually** to force a new version snapshot immediately.
 
@@ -177,6 +177,6 @@ Consumption is typically recorded automatically via Purchase Orders or Stock Pic
 
 ## 7. Support
 
-**Author**: ELB Marketing
-**Website**: [https://entrpryz.com](https://entrpryz.com)
+**Author**: Waleed Ahmad (Shadow Scripter)
+**Website**: [Check out my portfolio](https://www.shadowscripter.online)
 **License**: LGPL-3
