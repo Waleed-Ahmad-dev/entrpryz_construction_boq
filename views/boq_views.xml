@@ -1,83 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- ./views/boq_views.xml -->
 <odoo>
-    <record id="view_construction_boq_line_form" model="ir.ui.view">
-        <field name="name">construction.boq.line.form</field>
-        <field name="model">construction.boq.line</field>
-        <field name="arch" type="xml">
-            <form string="BOQ Item">
-                <header>
-                    <field name="consumption_percentage" widget="progressbar" style="width: 200px;"/>
-                </header>
-                <sheet>
-                    <div class="oe_title">
-                        <label for="name" string="Description"/>
-                        <h1><field name="name" placeholder="e.g. Concrete M25 Grade"/></h1>
-                    </div>
-                    
-                    <group>
-                        <group string="Estimation">
-                            <field name="product_id" widget="many2one_avatar"/>
-                            <label for="quantity"/>
-                            <div class="o_row">
-                                <field name="quantity" class="oe_inline fw-bold"/>
-                                <field name="uom_id" class="oe_inline"/>
-                            </div>
-                            <field name="estimated_rate" widget="monetary"/>
-                            <separator/>
-                            <field name="budget_amount" widget="monetary" decoration-bf="1" style="font-size: 1.2em;"/>
-                            <field name="currency_id" invisible="1"/>
-                        </group>
-                        <group string="Classification">
-                            <field name="section_id"/>
-                            <field name="cost_type" widget="radio" options="{'horizontal': true}"/>
-                            <field name="task_id" options="{'no_create': True}"/>
-                            <field name="activity_code"/>
-                        </group>
-                    </group>
-
-                    <notebook>
-                        <page string="Tracking &amp; Consumption" name="tracking">
-                            <group>
-                                <group string="Actuals">
-                                    <field name="consumed_quantity"/>
-                                    <field name="consumed_amount" widget="monetary"/>
-                                </group>
-                                <group string="Balance">
-                                    <field name="remaining_quantity" decoration-danger="remaining_quantity &lt; 0"/>
-                                    <field name="remaining_amount" widget="monetary" decoration-danger="remaining_amount &lt; 0"/>
-                                    <field name="allow_over_consumption" widget="boolean_toggle" groups="entrpryz_construction_boq.group_finance_head"/>
-                                </group>
-                            </group>
-                            <field name="consumption_ids" readonly="1">
-                                <list>
-                                    <field name="date"/>
-                                    <field name="source_model"/>
-                                    <field name="quantity"/>
-                                    <field name="amount"/>
-                                    <field name="user_id"/>
-                                </list>
-                            </field>
-                        </page>
-                        <page string="Accounting &amp; Technical" name="accounting">
-                            <group>
-                                <group>
-                                    <field name="expense_account_id"/>
-                                    <field name="company_id" groups="base.group_multi_company"/>
-                                </group>
-                                <group>
-                                    <field name="analytic_account_id" readonly="1"/>
-                                    <field name="analytic_distribution" widget="analytic_distribution"/>
-                                </group>
-                            </group>
-                            <separator string="Long Description"/>
-                            <field name="description" placeholder="Technical specifications..."/>
-                        </page>
-                    </notebook>
-                </sheet>
-            </form>
-        </field>
-    </record>
-
+    <!-- BOQ Form View -->
     <record id="view_construction_boq_form" model="ir.ui.view">
         <field name="name">construction.boq.form</field>
         <field name="model">construction.boq</field>
@@ -93,14 +17,15 @@
                 </header>
                 <sheet>
                     <div class="oe_button_box" name="button_box">
-                        <button name="action_view_history" type="object" class="oe_stat_button" icon="fa-history" string="History" invisible="version == 1">
-                        </button>
+                        <button name="action_view_history" type="object" class="oe_stat_button" icon="fa-history" string="History" invisible="version == 1"/>
                     </div>
                     <widget name="web_ribbon" title="Archived" bg_color="bg-danger" invisible="active"/>
-                    
+
                     <div class="oe_title">
                         <label for="name" class="oe_edit_only"/>
-                        <h1><field name="name" placeholder="e.g. BOQ-2024-001"/></h1>
+                        <h1>
+                            <field name="name" placeholder="e.g. BOQ-2024-001"/>
+                        </h1>
                     </div>
                     <group>
                         <group string="Project Scope">
@@ -114,7 +39,8 @@
                             <div class="o_row">
                                 <field name="version" readonly="1" class="fw-bold"/>
                                 <span class="text-muted" invisible="not previous_boq_id">
-                                    (Previous: <field name="previous_boq_id" readonly="1" options="{'no_open': True}"/>)
+                                    (Previous: <field name="previous_boq_id" readonly="1" options="{'no_open': True}"/>
+)
                                 </span>
                             </div>
                             <field name="approval_date"/>
@@ -122,7 +48,7 @@
                             <field name="currency_id" invisible="1"/>
                         </group>
                     </group>
-                    
+
                     <notebook>
                         <page string="Budget Lines" name="lines">
                             <field name="boq_line_ids" widget="section_and_note_one2many" readonly="state == 'closed'">
@@ -132,25 +58,29 @@
                                         <create name="add_section_control" string="Add a section" context="{'default_display_type': 'line_section'}"/>
                                         <create name="add_note_control" string="Add a note" context="{'default_display_type': 'line_note'}"/>
                                     </control>
-                                    
+
                                     <field name="sequence" widget="handle"/>
                                     <field name="display_type" column_invisible="1"/>
-                                    <field name="company_id" column_invisible="1"/>
-                                    
-                                    <field name="section_id" optional="show"/>
-                                    <field name="name" widget="section_and_note_text"/>
-                                    <field name="cost_type" optional="show" widget="badge"/>
-                                    <field name="quantity"/>
-                                    <field name="uom_id" nolabel="1"/>
-                                    <field name="budget_amount" widget="monetary" sum="Total Budget" decoration-bf="1"/>
-                                    
-                                    <field name="consumption_percentage" widget="progressbar" nolabel="1"/>
-                                    <field name="remaining_amount" widget="monetary" optional="show" decoration-danger="remaining_amount &lt; 0"/>
-                                    
+
+                                    <!-- Section/Note Display -->
+                                    <field name="name" widget="section_and_note_text" attrs="{'invisible': [('display_type', '=', False)]}"/>
+
+                                    <!-- Regular Line Display -->
+                                    <field name="product_id" attrs="{'invisible': [('display_type', '!=', False)]}" widget="many2one_avatar"/>
+                                    <field name="quantity" attrs="{'invisible': [('display_type', '!=', False)]}" string="Budget Qty"/>
+                                    <field name="estimated_rate" attrs="{'invisible': [('display_type', '!=', False)]}" string="Budget Rate"/>
+                                    <field name="budget_amount" attrs="{'invisible': [('display_type', '!=', False)]}" widget="monetary" sum="Total Budget"/>
+                                    <field name="remaining_amount" attrs="{'invisible': [('display_type', '!=', False)]}" widget="monetary" string="Available Budget"/>
+
                                     <field name="currency_id" column_invisible="1"/>
+                                    <field name="product_config_valid" column_invisible="1"/>
+
+                                    <!-- Action Button Column -->
+                                    <field name="id" widget="handle"/>
+                                    <button name="action_open_advanced_view" type="object" icon="fa-external-link" string="Advanced" attrs="{'invisible': [('display_type', '!=', False)]}" class="oe_edit_only"/>
                                 </list>
                             </field>
-                            
+
                             <group name="note_group" col="6" class="mt-2 mt-md-0">
                                 <group class="oe_subtotal_footer oe_right" colspan="2" name="sale_total">
                                     <field name="total_budget" widget="monetary" options="{'currency_field': 'currency_id'}"/>
@@ -158,7 +88,7 @@
                                 <div class="clearfix"/>
                             </group>
                         </page>
-                        
+
                         <page string="Audit Trail" name="audit">
                             <group>
                                 <group>
@@ -224,17 +154,7 @@
         </field>
     </record>
 
-    <record id="view_construction_boq_section_tree" model="ir.ui.view">
-        <field name="name">construction.boq.section.list</field>
-        <field name="model">construction.boq.section</field>
-        <field name="arch" type="xml">
-            <list string="BOQ Sections" editable="bottom">
-                <field name="sequence" widget="handle"/>
-                <field name="name" placeholder="e.g. Substructure"/>
-                <field name="company_id" groups="base.group_multi_company"/>
-            </list>
-        </field>
-    </record>
+    <!-- Remove old section views since we're using display_type -->
 
     <record id="action_construction_boq" model="ir.actions.act_window">
         <field name="name">Construction BOQs</field>
@@ -244,33 +164,16 @@
         <field name="help" type="html">
             <p class="o_view_nocontent_smiling_face">
                 Create a new Construction BOQ
-            </p><p>
+            </p>
+            <p>
                 Manage your project budgets, track costs, and handle revisions.
                 Start by selecting a project and defining the budget lines.
             </p>
         </field>
     </record>
 
-    <record id="action_construction_boq_section" model="ir.actions.act_window">
-        <field name="name">BOQ Sections</field>
-        <field name="res_model">construction.boq.section</field>
-        <field name="view_mode">list</field>
-        <field name="help" type="html">
-            <p class="o_view_nocontent_smiling_face">
-                Create a new BOQ Section
-            </p><p>
-                Define sections to organize your BOQ lines (e.g. Substructure, Superstructure, MEP).
-            </p>
-        </field>
-    </record>
-
-    <menuitem id="menu_construction_root" 
-        name="Construction" 
-        web_icon="entrpryz_construction_boq,static/description/icon.png" 
-        sequence="10"
-    />
+    <menuitem id="menu_construction_root" name="Construction" web_icon="entrpryz_construction_boq,static/description/icon.png" sequence="10" />
     <menuitem id="menu_construction_boq" name="BOQs" parent="menu_construction_root" action="action_construction_boq" sequence="1"/>
-    
-    <menuitem id="menu_construction_configuration" name="Configuration" parent="menu_construction_root" sequence="100"/>
-    <menuitem id="menu_construction_boq_section" name="BOQ Sections" parent="menu_construction_configuration" action="action_construction_boq_section" sequence="1"/>
+
+    <!-- Remove old section menu items -->
 </odoo>
