@@ -2,11 +2,13 @@
 # -*- coding: utf-8 -*-
 from odoo import models, fields, api, _
 from odoo.exceptions import ValidationError
+
 class ConstructionBOQRevision(models.Model):
     _name = 'construction.boq.revision'
     _description = 'BOQ Revision History'
     _order = 'create_date desc'
     _rec_name = 'display_name'
+    
     # Performance Optimization: Added indexes for frequently searched fields
     original_boq_id = fields.Many2one(
         'construction.boq',
@@ -38,7 +40,7 @@ class ConstructionBOQRevision(models.Model):
         'res.users',
         string='Approved By',
         readonly=True,
-        index=True, # Added index for faster user-based filtering
+        index=True, # Added index for user-based filtering
         help="User who approved this revision"
     )
    
@@ -89,12 +91,20 @@ class ConstructionBOQRevision(models.Model):
         index=True, # Indexed for faster date-based filtering
     )
    
+    # Performance Optimization: Archive instead of delete for historical data
+    active = fields.Boolean(
+        string='Active',
+        default=True,
+        help="If unchecked, it will allow you to hide the revision without removing it."
+    )
+   
     # Performance Optimization: SQL constraints for data integrity
     _sql_constraints = [
         ('unique_revision_pair',
          'UNIQUE(original_boq_id, new_boq_id)',
          'A revision record already exists for this BOQ pair.'),
     ]
+    
     @api.depends('original_boq_id', 'new_boq_id', 'create_date')
     def _compute_display_name(self):
         """Compute display name for better UI performance"""
@@ -103,6 +113,7 @@ class ConstructionBOQRevision(models.Model):
                 revision.display_name = f"Revision: {revision.original_boq_id.name} → {revision.new_boq_id.name}"
             else:
                 revision.display_name = f"Revision {revision.id}"
+    
     @api.constrains('original_boq_id', 'new_boq_id')
     def _check_boq_relationship(self):
         """Validate BOQ relationship to prevent circular revisions"""
@@ -121,6 +132,7 @@ class ConstructionBOQRevision(models.Model):
                     _('This BOQ is already an original in another revision. '
                       'Please update the existing revision instead.')
                 )
+    
     def name_get(self):
         """Optimized name_get to avoid multiple queries"""
         # Use prefetching for better performance
@@ -128,39 +140,38 @@ class ConstructionBOQRevision(models.Model):
         self.mapped('new_boq_id.name')
        
         return [(record.id, record.display_name) for record in self]
-    # Performance Optimization: Domain filters for related fields
+    
+    # FIXED: Remove access_rights_uid parameter from _search method
     @api.model
-    def _search(self, args, offset=0, limit=None, order=None, access_rights_uid=None):
+    def _search(self, args, offset=0, limit=None, order=None, count=False):
         """Optimize search queries with proper indexing"""
         # Add default ordering if not specified
         if not order:
             order = self._order
        
+        # FIXED: Call super without access_rights_uid parameter
         return super(ConstructionBOQRevision, self)._search(
-            args, offset=offset, limit=limit, order=order,
-            access_rights_uid=access_rights_uid
+            args, offset=offset, limit=limit, order=order, count=count
         )
+    
     # Performance Optimization: Batch methods for better ORM usage
     def get_related_boqs(self):
         """Get all related BOQs in a single query"""
         boq_ids = self.mapped('original_boq_id') + self.mapped('new_boq_id')
         return boq_ids
+    
     # Performance Optimization: Add security rules for better access control
     @api.model
     def _get_default_team(self):
         """Get default construction team for access control"""
         # This would typically be implemented based on your business logic
         return self.env['construction.team'].search([], limit=1)
-    # Performance Optimization: Archive instead of delete for historical data
-    active = fields.Boolean(
-        string='Active',
-        default=True,
-        help="If unchecked, it will allow you to hide the revision without removing it."
-    )
+    
     def action_archive(self):
         """Archive revision instead of deleting"""
         self.write({'active': False})
         return True
+    
     def action_unarchive(self):
         """Unarchive revision"""
         self.write({'active': True})
