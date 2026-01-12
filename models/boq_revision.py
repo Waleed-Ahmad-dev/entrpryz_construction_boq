@@ -141,17 +141,17 @@ class ConstructionBOQRevision(models.Model):
        
         return [(record.id, record.display_name) for record in self]
     
-    # FIXED: Remove access_rights_uid parameter from _search method
+    # FIXED: Updated _search method for Odoo 18 compatibility
     @api.model
-    def _search(self, args, offset=0, limit=None, order=None, count=False):
+    def _search(self, args, offset=0, limit=None, order=None):
         """Optimize search queries with proper indexing"""
         # Add default ordering if not specified
         if not order:
             order = self._order
        
-        # FIXED: Call super without access_rights_uid parameter
+        # FIXED: Call super without count parameter (Odoo 18 compatibility)
         return super(ConstructionBOQRevision, self)._search(
-            args, offset=offset, limit=limit, order=order, count=count
+            args, offset=offset, limit=limit, order=order
         )
     
     # Performance Optimization: Batch methods for better ORM usage
