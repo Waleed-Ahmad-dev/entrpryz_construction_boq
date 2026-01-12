@@ -92,7 +92,7 @@ class ConstructionBOQReport(models.Model):
                 ) cons ON TRUE
                 
                 WHERE b.state IN ('approved', 'locked', 'closed')
-                AND l.active = True  -- Assuming there's an active field, add if exists
+                AND b.active = True  -- Use b.active (BOQ header) instead of l.active
             )
         """ % self._table
         
