@@ -57,14 +57,19 @@ class StockMove(models.Model):
         # Standard Odoo/Cybrosys logic to get the default account
         destination_account_id = super()._get_dest_account(accounts_data)
 
-        # Custom Logic: If BOQ Line exists, use its expense account
+        # Custom Logic: If BOQ Line exists, use its expense account, or fallback to product
         if self.boq_line_id and self.location_dest_id.usage in ('customer', 'production'):
-            if not self.boq_line_id.expense_account_id:
+            # [FIX] Attempt to use BOQ line account, fallback to product/category defaults
+            account = self.boq_line_id.expense_account_id or \
+                      self.boq_line_id.product_id.property_account_expense_id or \
+                      self.boq_line_id.product_id.categ_id.property_account_expense_categ_id
+            
+            if not account:
                 raise ValidationError(
-                    _("The linked BOQ Line %s has no Expense Account configured.") % 
-                    self.boq_line_id.name
+                    _("The linked BOQ Line %s (Product: %s) has no Expense Account configured.") % 
+                    (self.boq_line_id.name, self.boq_line_id.product_id.name)
                 )
-            return self.boq_line_id.expense_account_id.id
+            return account.id
             
         return destination_account_id
 
