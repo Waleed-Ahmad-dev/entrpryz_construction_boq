@@ -6,12 +6,13 @@ from odoo.exceptions import ValidationError
 class StockMove(models.Model):
     _inherit = 'stock.move'
 
-    # [cite: 75] Link this move to a BOQ line for budget tracking.
+    # Link this move to a BOQ line for budget tracking.
     boq_line_id = fields.Many2one(
         'construction.boq.line',
         string='BOQ Line',
         index=True,
-        domain="[('boq_id.state', 'in', ('approved', 'locked'))]",
+        # [FIX] Added display_type = False to domain
+        domain="[('boq_id.state', 'in', ('approved', 'locked')), ('display_type', '=', False)]",
         help="Link this move to a BOQ line for budget tracking."
     )
 
