@@ -66,6 +66,8 @@
 
                                     <field name="product_id" invisible="display_type" widget="many2one_avatar"/>
                                     <field name="quantity" invisible="display_type" string="Budget Qty"/>
+                                    <field name="uom_id" invisible="display_type" optional="show" string="UoM"/>
+
                                     <field name="estimated_rate" invisible="display_type" string="Budget Rate"/>
 
                                     <field name="analytic_distribution" widget="analytic_distribution" optional="hide" invisible="display_type"/>
