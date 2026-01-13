@@ -536,6 +536,11 @@ class ConstructionBOQConsumption(models.Model):
     _order = 'date desc, id desc'
 
     boq_line_id = fields.Many2one('construction.boq.line', string='BOQ Line', required=True, ondelete='restrict', index=True)
+    
+    # --- FIX START: Added company_id to support Record Rules ---
+    company_id = fields.Many2one('res.company', related='boq_line_id.company_id', string='Company', store=True, readonly=True)
+    # --- FIX END ---
+    
     source_model = fields.Char(string='Source Model', required=True)
     source_id = fields.Integer(string='Source ID', required=True)
     
