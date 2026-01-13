@@ -24,6 +24,9 @@ jobs:
             # ⬇️ NEW LINE: Tell Git to trust this folder!
             git config --global --add safe.directory /root/odoo-projects/ELB/addons/entrpryz_construction_boq
 
+            # Stash the changes before pulling the code
+            git stash
+
             # 2. Pull the latest code
             git pull origin main
 
