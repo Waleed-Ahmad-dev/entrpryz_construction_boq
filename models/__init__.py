@@ -1,4 +1,3 @@
-# ./models/__init__.py
 # -*- coding: utf-8 -*-
 from . import boq
 from . import boq_revision

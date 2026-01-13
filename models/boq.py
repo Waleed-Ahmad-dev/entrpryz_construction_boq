@@ -1,4 +1,3 @@
-# ./models/boq.py
 # -*- coding: utf-8 -*-
 import re
 from odoo import models, fields, api, _
