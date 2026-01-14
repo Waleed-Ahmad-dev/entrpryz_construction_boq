@@ -1,3 +1,4 @@
+========== ./views/boq_views.xml ==========
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
     <record id="view_construction_boq_form" model="ir.ui.view">
@@ -60,6 +61,11 @@
                                     <field name="sequence" widget="handle"/>
                                     <field name="display_type" column_invisible="1"/>
 
+                                    <field name="boq_id" column_invisible="1"/>
+                                    <field name="company_id" column_invisible="1"/>
+                                    <field name="description" column_invisible="1"/>
+                                    <field name="expense_account_id" column_invisible="1"/>
+
                                     <field name="section_id" invisible="display_type != 'line_section'" options="{'no_create': False}"/>
 
                                     <field name="name" widget="section_and_note_text" invisible="not display_type"/>
@@ -78,7 +84,7 @@
                                     <field name="currency_id" column_invisible="1"/>
                                     <field name="product_config_valid" column_invisible="1"/>
 
-                                    <field name="id" widget="handle"/>
+                                    <field name="id" column_invisible="1"/>
                                     <button name="action_open_advanced_view" type="object" icon="fa-external-link" string="Advanced" invisible="display_type" class="oe_edit_only"/>
                                 </list>
                             </field>
