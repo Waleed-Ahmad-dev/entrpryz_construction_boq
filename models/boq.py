@@ -259,6 +259,10 @@ class ConstructionBOQLine(models.Model):
 
     # Basic Information
     boq_id = fields.Many2one('construction.boq', string='BOQ Reference', required=True, ondelete='cascade', index=True)
+    
+    # [FIX] Added project_id related field to handle domains in sub-views where 'parent' is not available
+    project_id = fields.Many2one('project.project', related='boq_id.project_id', store=True, readonly=True)
+    
     display_type = fields.Selection([
         ('line_section', 'Section'),
         ('line_note', 'Note')
@@ -289,7 +293,8 @@ class ConstructionBOQLine(models.Model):
         ('overhead', 'Overhead')
     ], string='Cost Type', default='material', help="Classifies the type of cost for reporting and analysis.")
     
-    task_id = fields.Many2one('project.task', string='Task', domain="[('project_id', '=', parent.project_id)]")
+    # [FIX] Updated domain to use local project_id instead of parent.project_id
+    task_id = fields.Many2one('project.task', string='Task', domain="[('project_id', '=', project_id)]")
     activity_code = fields.Char(string='Activity Code', help="Code used to link this BOQ line to a specific project task or schedule activity.")
     
     company_id = fields.Many2one('res.company', related='boq_id.company_id', string='Company', store=True, readonly=True)
@@ -323,11 +328,11 @@ class ConstructionBOQLine(models.Model):
             if not rec.display_type:
                 # If it's a real line (not a section/note)
                 if not rec.product_id:
-                     raise ValidationError(_('Product is mandatory for BOQ lines that are not Sections/Notes.'))
+                      raise ValidationError(_('Product is mandatory for BOQ lines that are not Sections/Notes.'))
                 if not rec.uom_id:
-                     raise ValidationError(_('Unit of Measure is mandatory for BOQ line: %s') % rec.name)
+                      raise ValidationError(_('Unit of Measure is mandatory for BOQ line: %s') % rec.name)
                 if rec.quantity <= 0:
-                     raise ValidationError(_('Quantity must be positive for BOQ line: %s') % rec.name)
+                      raise ValidationError(_('Quantity must be positive for BOQ line: %s') % rec.name)
 
     @api.depends('product_id')
     def _compute_product_config_valid(self):
@@ -568,7 +573,7 @@ class ConstructionBOQConsumption(models.Model):
                 line = line_map[line_id]
                 # [FIX] Do not process consumption for Sections
                 if line.display_type:
-                     raise ValidationError(_("Cannot record consumption on a Section/Note BOQ line."))
+                      raise ValidationError(_("Cannot record consumption on a Section/Note BOQ line."))
 
                 qty = vals.get('quantity', 0.0)
                 amt = vals.get('amount', 0.0)
